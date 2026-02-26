@@ -1,0 +1,29 @@
+# Dependencies
+__pycache__/
+*.pyc
+node_modules/
+
+# Environment / secrets
+.env
+*.env.local
+
+# Custom lab mappings (institution-specific)
+portal/lab-mappings.json
+
+# Patient data
+Dr_claude/handoff-tool/patients/*.md
+!Dr_claude/handoff-tool/patients/_TEMPLATE.md
+
+# Uploads
+portal/uploads/*
+!portal/uploads/.gitkeep
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo

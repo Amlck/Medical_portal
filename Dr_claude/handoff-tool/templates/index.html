@@ -1,0 +1,1313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Handoff — Clinical Note Generator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap" rel="stylesheet" />
+  <style>
+    /* ---- Light theme (default) ---- */
+    :root {
+      --bg:        #f8fafc;
+      --surface:   #ffffff;
+      --surface2:  #f1f5f9;
+      --border:    #e2e8f0;
+      --text:      #1e293b;
+      --text-dim:  #64748b;
+      --accent:    #0891b2;
+      --accent-bg: rgba(8,145,178,0.08);
+      --green:     #059669;
+      --green-bg:  rgba(5,150,105,0.08);
+      --warn:      #f59e0b;
+      --warn-bg:   rgba(245,158,11,0.08);
+      --red:       #ef4444;
+      --mono:      'IBM Plex Mono', monospace;
+      --serif:     'Source Serif 4', Georgia, serif;
+    }
+    /* ---- Dark theme ---- */
+    html[data-theme="dark"] {
+      --bg:        #0d1117;
+      --surface:   #161b22;
+      --surface2:  #1c2129;
+      --border:    #30363d;
+      --text:      #e6edf3;
+      --text-dim:  #8b949e;
+      --accent:    #58a6ff;
+      --accent-bg: rgba(88,166,255,0.08);
+      --green:     #3fb950;
+      --green-bg:  rgba(63,185,80,0.08);
+      --warn:      #f0883e;
+      --warn-bg:   rgba(240,136,62,0.08);
+      --red:       #f85149;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: var(--mono);
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ---- Header ---- */
+    header {
+      padding: 0.9rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      flex-shrink: 0;
+    }
+    header h1 { font-size: 1rem; font-weight: 600; letter-spacing: 0.04em; color: var(--accent); }
+    header span { font-size: 0.7rem; color: var(--text-dim); }
+    .header-actions { margin-left: auto; display: flex; gap: 0.5rem; }
+
+    /* ---- Layout ---- */
+    .app { display: flex; flex: 1; overflow: hidden; }
+
+    /* ---- Sidebar ---- */
+    .sidebar {
+      width: 260px;
+      min-width: 260px;
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      background: var(--surface);
+    }
+    .sidebar-header {
+      padding: 0.6rem 1rem;
+      font-size: 0.65rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .patient-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0.5rem;
+    }
+    .patient-card {
+      padding: 0.6rem 0.75rem;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-bottom: 2px;
+      transition: background 0.1s;
+    }
+    .patient-card:hover { background: var(--surface2); }
+    .patient-card.active { background: var(--accent-bg); border-left: 2px solid var(--accent); }
+    .patient-card .name { font-size: 0.8rem; font-weight: 600; color: var(--text); }
+    .patient-card .meta { font-size: 0.65rem; color: var(--text-dim); margin-top: 2px; }
+    .patient-card .card-actions {
+      display: none;
+      gap: 0.3rem;
+      margin-top: 4px;
+    }
+    .patient-card.active .card-actions { display: flex; }
+    .card-actions button {
+      font-size: 0.55rem;
+      padding: 0.15rem 0.45rem;
+      border-radius: 3px;
+    }
+    .patient-card.discharged { opacity: 0.5; }
+    .patient-card.discharged .name::after {
+      content: ' (DC)';
+      font-size: 0.6rem;
+      color: var(--text-dim);
+      font-weight: 400;
+    }
+
+    .empty-state {
+      padding: 2rem 1rem;
+      text-align: center;
+      color: var(--text-dim);
+      font-size: 0.75rem;
+      line-height: 1.6;
+    }
+
+    /* ---- Main area ---- */
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ---- Tabs ---- */
+    .tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+      flex-shrink: 0;
+    }
+    .tab {
+      padding: 0.6rem 1.25rem;
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      font-weight: 500;
+      color: var(--text-dim);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all 0.15s;
+      background: none;
+      border-top: none;
+      border-left: none;
+      border-right: none;
+    }
+    .tab:hover { color: var(--text); }
+    .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+    /* ---- Tab content ---- */
+    .tab-content { display: none; flex: 1; overflow: hidden; min-height: 0; }
+    .tab-content.active { display: flex; flex-direction: column; min-height: 0; }
+
+    /* ---- Append panel ---- */
+    .append-panel { flex: 1; display: flex; flex-direction: column; }
+    .category-bar {
+      padding: 0.5rem 1rem;
+      display: flex;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+    }
+    .cat-btn {
+      font-family: var(--mono);
+      font-size: 0.6rem;
+      padding: 0.25rem 0.6rem;
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      background: transparent;
+      color: var(--text-dim);
+      cursor: pointer;
+      transition: all 0.1s;
+    }
+    .cat-btn:hover { color: var(--text); border-color: var(--text-dim); }
+    .cat-btn.active { color: var(--accent); border-color: var(--accent); background: var(--accent-bg); }
+
+    textarea {
+      flex: 1;
+      background: var(--bg);
+      color: var(--text);
+      border: none;
+      padding: 1rem 1.25rem;
+      font-family: var(--mono);
+      font-size: 0.82rem;
+      line-height: 1.65;
+      resize: none;
+      outline: none;
+    }
+    textarea::placeholder { color: var(--text-dim); opacity: 0.5; }
+
+    /* ---- Record viewer ---- */
+    .record-viewer {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1.25rem;
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      line-height: 1.65;
+      white-space: pre-wrap;
+      color: var(--text-dim);
+    }
+
+    /* ---- Generate panel ---- */
+    .generate-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+    .gen-controls {
+      padding: 0.6rem 1rem;
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+    }
+    .gen-type-btn {
+      font-family: var(--mono);
+      font-size: 0.65rem;
+      font-weight: 600;
+      padding: 0.35rem 0.8rem;
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      background: transparent;
+      color: var(--text-dim);
+      cursor: pointer;
+      transition: all 0.1s;
+    }
+    .gen-type-btn:hover { color: var(--text); border-color: var(--text-dim); }
+    .gen-type-btn.active { color: var(--green); border-color: var(--green); background: var(--green-bg); }
+
+    .output {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1.25rem;
+      font-family: var(--serif);
+      font-size: 0.9rem;
+      line-height: 1.7;
+    }
+    .output.empty {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-dim);
+      font-family: var(--mono);
+      font-size: 0.75rem;
+    }
+    .output h3 {
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      color: var(--accent);
+      margin: 1.4rem 0 0.4rem;
+      padding-bottom: 0.2rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .output h3:first-child { margin-top: 0; }
+    .output h2 {
+      font-family: var(--mono);
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--warn);
+      margin: 1.8rem 0 0.6rem;
+      padding: 0.4rem 0.7rem;
+      background: var(--warn-bg);
+      border-left: 3px solid var(--warn);
+    }
+    .output ul { padding-left: 1.2rem; margin: 0.2rem 0 0.6rem; }
+    .output li { margin-bottom: 0.25rem; }
+    .output hr { border: none; border-top: 2px dashed var(--border); margin: 1.5rem 0; }
+    .output p { margin-bottom: 0.5rem; }
+    .output strong { color: var(--text); font-weight: 600; }
+
+    /* ---- Buttons ---- */
+    .btn-bar {
+      padding: 0.6rem 1rem;
+      border-top: 1px solid var(--border);
+      background: var(--surface);
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+    }
+    button {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+      padding: 0.45rem 1rem;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .btn-primary {
+      background: var(--accent);
+      color: var(--bg);
+      border-color: var(--accent);
+    }
+    .btn-primary:hover { filter: brightness(1.15); }
+    .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; filter: none; }
+    .btn-green {
+      background: var(--green);
+      color: var(--bg);
+      border-color: var(--green);
+    }
+    .btn-green:hover { filter: brightness(1.15); }
+    .btn-green:disabled { opacity: 0.4; cursor: not-allowed; filter: none; }
+    .btn-secondary {
+      background: transparent;
+      color: var(--text-dim);
+    }
+    .btn-secondary:hover { color: var(--text); border-color: var(--text-dim); }
+    .btn-warn {
+      background: transparent;
+      color: var(--warn);
+      border-color: var(--warn);
+    }
+    .btn-warn:hover { background: var(--warn-bg); }
+
+    .status { margin-left: auto; font-size: 0.65rem; color: var(--text-dim); }
+    .status.error { color: var(--red); }
+    .kbd-hint {
+      font-size: 0.6rem;
+      color: inherit;
+      opacity: 0.7;
+      margin-left: 0.4rem;
+      font-weight: 500;
+      background: rgba(0,0,0,0.15);
+      padding: 0.1rem 0.35rem;
+      border-radius: 3px;
+      border: 1px solid rgba(0,0,0,0.1);
+    }
+
+    /* ---- Loading ---- */
+    @keyframes pulse {
+      0%, 100% { opacity: 0.4; }
+      50% { opacity: 1; }
+    }
+    .loading .dot {
+      display: inline-block;
+      width: 5px; height: 5px;
+      border-radius: 50%;
+      background: var(--accent);
+      margin: 0 2px;
+      animation: pulse 1.2s ease-in-out infinite;
+    }
+    .loading .dot:nth-child(2) { animation-delay: 0.2s; }
+    .loading .dot:nth-child(3) { animation-delay: 0.4s; }
+
+    /* ---- Modal ---- */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 1.5rem;
+      width: 420px;
+      max-width: 90vw;
+    }
+    .modal h2 {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 1rem;
+    }
+    .modal label {
+      display: block;
+      font-size: 0.65rem;
+      font-weight: 600;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 0.25rem;
+      margin-top: 0.6rem;
+    }
+    .modal input {
+      width: 100%;
+      padding: 0.4rem 0.6rem;
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      color: var(--text);
+      outline: none;
+    }
+    .modal input:focus { border-color: var(--accent); }
+    .modal .modal-actions {
+      margin-top: 1.25rem;
+      display: flex;
+      gap: 0.5rem;
+      justify-content: flex-end;
+    }
+
+    /* ---- Lab paste banner ---- */
+    .lab-paste-banner {
+      display: none;
+      padding: 0.4rem 0.8rem;
+      background: var(--accent-bg);
+      border-bottom: 1px solid var(--border);
+      font-size: 0.62rem;
+      color: var(--accent);
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .lab-paste-banner.show { display: flex; }
+    .lab-paste-banner .parsed-summary { flex: 1; }
+    .lab-paste-banner button {
+      font-size: 0.6rem;
+      padding: 0.2rem 0.5rem;
+    }
+    .lab-table-preview {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 0.5rem;
+      margin: 0.4rem 0.8rem;
+      font-size: 0.62rem;
+      max-height: 200px;
+      overflow-y: auto;
+      display: none;
+    }
+    .lab-table-preview.show { display: block; }
+    .lab-table-preview table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .lab-table-preview th {
+      text-align: left;
+      padding: 0.2rem 0.5rem;
+      font-weight: 600;
+      color: var(--text-dim);
+      border-bottom: 1px solid var(--border);
+      font-size: 0.58rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .lab-table-preview td {
+      padding: 0.2rem 0.5rem;
+      border-bottom: 1px solid var(--border);
+      color: var(--text);
+    }
+    .lab-table-preview td.abnormal { color: var(--red); font-weight: 600; }
+    .lab-table-preview td.name-col { color: var(--accent); font-weight: 500; }
+
+    /* ---- No patient selected state ---- */
+    .no-selection {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-dim);
+      font-size: 0.8rem;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>HANDOFF</h1>
+  <span>Clinical Note Generator</span>
+  <div class="header-actions">
+    <button class="btn-warn" onclick="batchSBAR()" title="Generate SBAR for all active patients">Batch SBAR</button>
+    <button class="btn-secondary" onclick="printChart()" title="Generate printable chart of all patients" style="font-size:0.65rem;">&#128424; Print Chart</button>
+  </div>
+</header>
+
+<div class="app">
+  <!-- Sidebar: Patient list -->
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <span>Patients</span>
+      <button class="btn-secondary" style="font-size:0.6rem; padding:0.2rem 0.5rem;" onclick="openNewPatientModal()">+ New</button>
+    </div>
+    <div class="patient-list" id="patient-list">
+      <div class="empty-state">No patients yet.<br>Click "+ New" to add one.</div>
+    </div>
+  </div>
+
+  <!-- Main area -->
+  <div class="main" id="main-area">
+    <div class="no-selection" id="no-selection">
+      Select a patient from the sidebar, or add a new one
+    </div>
+
+    <!-- Content (hidden until patient selected) -->
+    <div id="patient-content" style="display:none; flex:1; flex-direction:column; overflow:hidden; min-height:0;">
+      <div class="tabs">
+        <button class="tab active" data-tab="append" onclick="switchTab('append')">Add Data</button>
+        <button class="tab" data-tab="record" onclick="switchTab('record')">Full Record</button>
+        <button class="tab" data-tab="generate" onclick="switchTab('generate')">Generate Note</button>
+      </div>
+
+      <!-- Tab: Append data -->
+      <div class="tab-content active" id="tab-append">
+        <div class="append-panel">
+          <div class="category-bar">
+            <button class="cat-btn active" data-cat="Labs" onclick="setCat(this)">Labs</button>
+            <button class="cat-btn" data-cat="Vitals" onclick="setCat(this)">Vitals</button>
+            <button class="cat-btn" data-cat="Imaging" onclick="setCat(this)">Imaging</button>
+            <button class="cat-btn" data-cat="Consult" onclick="setCat(this)">Consult</button>
+            <button class="cat-btn" data-cat="Procedure" onclick="setCat(this)">Procedure</button>
+            <button class="cat-btn" data-cat="Medication Change" onclick="setCat(this)">Meds</button>
+            <button class="cat-btn" data-cat="Clinical Note" onclick="setCat(this)">Note</button>
+            <button class="cat-btn" data-cat="Other" onclick="setCat(this)">Other</button>
+          </div>
+          <div class="lab-paste-banner" id="lab-paste-banner">
+            <span style="font-size:0.85rem;">&#128300;</span>
+            <span class="parsed-summary" id="lab-parsed-summary">Lab table detected</span>
+            <button class="btn-primary" onclick="acceptLabPaste()">Insert as Table</button>
+            <button class="btn-secondary" onclick="dismissLabBanner()">Keep Raw</button>
+          </div>
+          <div class="lab-table-preview" id="lab-table-preview"></div>
+          <textarea id="append-input" placeholder="Paste new clinical data here..."></textarea>
+          <div class="btn-bar">
+            <button class="btn-primary" onclick="appendData()">Append to Record<span class="kbd-hint" id="kbd-append"></span></button>
+            <span class="status" id="append-status"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab: Full record -->
+      <div class="tab-content" id="tab-record">
+        <div class="record-viewer" id="record-content">Loading...</div>
+        <div class="btn-bar">
+          <button class="btn-secondary" onclick="refreshRecord()">Refresh</button>
+        </div>
+      </div>
+
+      <!-- Tab: Generate -->
+      <div class="tab-content" id="tab-generate">
+        <div id="no-api-key-banner" style="display:none; align-items:center; gap:0.6rem; padding:0.6rem 1rem; background:var(--warn-bg); border:1px solid var(--warn); border-radius:6px; margin-bottom:0.6rem; font-size:0.68rem; color:var(--warn);">
+          <span style="font-size:1.1rem;">&#9888;</span>
+          <span>AI features require an API key. Open <strong>Settings</strong> in the portal sidebar to enter your OpenRouter key.</span>
+        </div>
+        <div class="generate-panel">
+          <div class="gen-controls">
+            <button class="gen-type-btn active" data-type="sbar" onclick="setGenType(this)">SBAR Handoff</button>
+            <button class="gen-type-btn" data-type="progress" onclick="setGenType(this)">Progress Note</button>
+            <button class="gen-type-btn" data-type="discharge_chrono" onclick="setGenType(this)">DC: Chronological</button>
+            <button class="gen-type-btn" data-type="discharge" onclick="setGenType(this)">DC: Problem-Oriented</button>
+            <button class="btn-green" style="margin-left:auto;" onclick="generateNote()">Generate<span class="kbd-hint" id="kbd-generate"></span></button>
+            <button class="btn-secondary" id="btn-copy" style="display:none;" onclick="copyOutput()">Copy</button>
+          </div>
+          <div class="output empty" id="output">Select a note type and click Generate</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- New Patient Modal -->
+<div class="modal-overlay" id="modal-new">
+  <div class="modal">
+    <h2>New Patient</h2>
+    <label>Patient Name *</label>
+    <input id="np-name" placeholder="e.g. 王OO" />
+    <label>Age / Sex</label>
+    <input id="np-age" placeholder="e.g. 68M" />
+    <label>MRN</label>
+    <input id="np-mrn" placeholder="Medical record number" />
+    <label>Admission Date</label>
+    <input id="np-admit" type="date" />
+    <label>Admitting Diagnosis</label>
+    <input id="np-dx" placeholder="e.g. NSTEMI" />
+    <label>PMH</label>
+    <input id="np-pmh" placeholder="e.g. HTN, DM2, CKD3" />
+    <label>Allergies</label>
+    <input id="np-allergy" placeholder="e.g. PCN" />
+    <label>Code Status</label>
+    <input id="np-code" placeholder="e.g. Full code" />
+    <label>Primary Team</label>
+    <input id="np-team" placeholder="e.g. Cardiology" />
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeModal('modal-new')">Cancel</button>
+      <button class="btn-primary" onclick="createPatient()">Create</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ---------------------------------------------------------------------------
+// State
+// ---------------------------------------------------------------------------
+let currentPatient = null;
+let currentCategory = 'Labs';
+let currentGenType = 'sbar';
+let aiAvailable = false;
+
+// ---------------------------------------------------------------------------
+// API Key — read from shared localStorage (set in portal Settings)
+// ---------------------------------------------------------------------------
+const API_KEY_STORAGE = 'medical-portal-api-key';
+
+function getApiHeaders(extra) {
+  const headers = { 'Content-Type': 'application/json', ...(extra || {}) };
+  const key = localStorage.getItem(API_KEY_STORAGE);
+  if (key) headers['X-API-Key'] = key;
+  return headers;
+}
+
+async function checkAiAvailable() {
+  try {
+    const key = localStorage.getItem(API_KEY_STORAGE);
+    const headers = key ? { 'X-API-Key': key } : {};
+    const res = await fetch('/api/ai-status', { headers });
+    const data = await res.json();
+    aiAvailable = data.ai_available;
+  } catch (e) {
+    aiAvailable = false;
+  }
+  updateAiUI();
+}
+
+function updateAiUI() {
+  // Disable/enable AI buttons based on availability
+  const genBtn = document.querySelector('[onclick="generateNote()"]');
+  const batchBtn = document.querySelector('[onclick="batchSBAR()"]');
+  const printBtn = document.querySelector('[onclick="printChart()"]');
+  const noKeyBanner = document.getElementById('no-api-key-banner');
+
+  if (noKeyBanner) {
+    noKeyBanner.style.display = aiAvailable ? 'none' : 'flex';
+  }
+
+  [genBtn, batchBtn, printBtn].forEach(btn => {
+    if (!btn) return;
+    if (!aiAvailable) {
+      btn.dataset.originalTitle = btn.title || '';
+      btn.title = 'API key required — set in portal Settings';
+    } else {
+      if (btn.dataset.originalTitle) btn.title = btn.dataset.originalTitle;
+    }
+  });
+}
+
+// Listen for API key changes from portal
+window.addEventListener('message', e => {
+  if (e.data && e.data.type === 'api-key-changed') {
+    checkAiAvailable();
+  }
+});
+
+// Check on load
+setTimeout(checkAiAvailable, 500);
+
+// ---------------------------------------------------------------------------
+// Patients
+// ---------------------------------------------------------------------------
+async function loadPatients() {
+  const res = await fetch('/api/patients');
+  const patients = await res.json();
+  const list = document.getElementById('patient-list');
+
+  if (patients.length === 0) {
+    list.innerHTML = '<div class="empty-state">No patients yet.<br>Click "+ New" to add one.</div>';
+    return;
+  }
+
+  list.innerHTML = patients.map(p => {
+    const isDC = p.id.endsWith('_dc');
+    return `
+    <div class="patient-card ${currentPatient === p.id ? 'active' : ''} ${isDC ? 'discharged' : ''}"
+         onclick="selectPatient('${p.id}')">
+      <div class="name">${esc(p.name)}</div>
+      <div class="meta">${esc(p.dx || '—')} &middot; ${esc(p.admitted || '—')}</div>
+      <div class="card-actions">
+        ${!isDC ? `<button class="btn-warn" onclick="event.stopPropagation(); dischargePatient('${p.id}')">Discharge</button>` : ''}
+        <button class="btn-secondary" style="color:var(--red);border-color:var(--red);" onclick="event.stopPropagation(); deletePatient('${p.id}', '${esc(p.name)}')">Delete</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function selectPatient(pid) {
+  currentPatient = pid;
+  document.getElementById('no-selection').style.display = 'none';
+  const pc = document.getElementById('patient-content');
+  pc.style.display = 'flex';
+  loadPatients(); // refresh active state
+  refreshRecord();
+}
+
+async function dischargePatient(pid) {
+  if (!confirm('Mark this patient as discharged? They will appear greyed out in the list.')) return;
+  const res = await fetch(`/api/patients/${pid}/discharge`, { method: 'POST' });
+  if (res.ok) {
+    const data = await res.json();
+    currentPatient = data.id; // switch to new _dc id
+    loadPatients();
+    refreshRecord();
+  } else {
+    const err = await res.json();
+    alert(err.error);
+  }
+}
+
+async function deletePatient(pid, name) {
+  if (!confirm(`Permanently delete ${name}? This cannot be undone.`)) return;
+  const res = await fetch(`/api/patients/${pid}`, { method: 'DELETE' });
+  if (res.ok) {
+    if (currentPatient === pid) {
+      currentPatient = null;
+      document.getElementById('patient-content').style.display = 'none';
+      document.getElementById('no-selection').style.display = 'flex';
+    }
+    loadPatients();
+  } else {
+    const err = await res.json();
+    alert(err.error);
+  }
+}
+
+function openNewPatientModal() {
+  document.getElementById('np-admit').value = new Date().toISOString().slice(0, 10);
+  document.getElementById('modal-new').classList.add('open');
+  document.getElementById('np-name').focus();
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+}
+
+async function createPatient() {
+  const name = document.getElementById('np-name').value.trim();
+  if (!name) return alert('Patient name is required.');
+
+  const body = {
+    name,
+    age_sex: document.getElementById('np-age').value.trim(),
+    mrn: document.getElementById('np-mrn').value.trim(),
+    admitted: document.getElementById('np-admit').value,
+    dx: document.getElementById('np-dx').value.trim(),
+    pmh: document.getElementById('np-pmh').value.trim(),
+    allergies: document.getElementById('np-allergy').value.trim(),
+    code_status: document.getElementById('np-code').value.trim(),
+    team: document.getElementById('np-team').value.trim(),
+  };
+
+  const res = await fetch('/api/patients', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    const err = await res.json();
+    return alert(err.error);
+  }
+
+  const data = await res.json();
+  closeModal('modal-new');
+
+  // Clear form
+  ['np-name','np-age','np-mrn','np-dx','np-pmh','np-allergy','np-code','np-team'].forEach(
+    id => document.getElementById(id).value = ''
+  );
+
+  selectPatient(data.id);
+}
+
+// ---------------------------------------------------------------------------
+// Tabs
+// ---------------------------------------------------------------------------
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
+  document.querySelectorAll('.tab-content').forEach(tc => tc.classList.toggle('active', tc.id === `tab-${name}`));
+  if (name === 'record') refreshRecord();
+}
+
+// ---------------------------------------------------------------------------
+// Category selector
+// ---------------------------------------------------------------------------
+function setCat(btn) {
+  document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  currentCategory = btn.dataset.cat;
+}
+
+// ---------------------------------------------------------------------------
+// Append data
+// ---------------------------------------------------------------------------
+async function appendData() {
+  if (!currentPatient) return;
+  const input = document.getElementById('append-input');
+  const content = input.value.trim();
+  if (!content) return;
+
+  const status = document.getElementById('append-status');
+  status.className = 'status';
+
+  const res = await fetch(`/api/patients/${currentPatient}/append`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ content, category: currentCategory }),
+  });
+
+  if (res.ok) {
+    const data = await res.json();
+    status.textContent = `Appended (${data.timestamp})`;
+    input.value = '';
+  } else {
+    const err = await res.json();
+    status.className = 'status error';
+    status.textContent = err.error;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Full record viewer
+// ---------------------------------------------------------------------------
+async function refreshRecord() {
+  if (!currentPatient) return;
+  const viewer = document.getElementById('record-content');
+  const res = await fetch(`/api/patients/${currentPatient}`);
+  if (res.ok) {
+    const data = await res.json();
+    viewer.textContent = data.content;
+  } else {
+    viewer.textContent = 'Error loading record.';
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Generate note
+// ---------------------------------------------------------------------------
+function setGenType(btn) {
+  document.querySelectorAll('.gen-type-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  currentGenType = btn.dataset.type;
+}
+
+async function generateNote() {
+  if (!currentPatient) return;
+
+  if (!aiAvailable) {
+    const outputEl = document.getElementById('output');
+    outputEl.className = 'output empty';
+    outputEl.textContent = 'No API key configured. Open Settings in the portal sidebar to enter your OpenRouter key.';
+    return;
+  }
+
+  const outputEl = document.getElementById('output');
+  const copyBtn = document.getElementById('btn-copy');
+  copyBtn.style.display = 'none';
+  outputEl.className = 'output';
+  outputEl.innerHTML = '<div class="loading"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>';
+
+  try {
+    const res = await fetch('/api/generate', {
+      method: 'POST',
+      headers: getApiHeaders(),
+      body: JSON.stringify({ patient_id: currentPatient, type: currentGenType }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+    outputEl.innerHTML = renderMarkdown(data.note);
+    copyBtn.style.display = 'inline-block';
+  } catch (err) {
+    outputEl.className = 'output empty';
+    outputEl.textContent = `Error: ${err.message}`;
+  }
+}
+
+function copyOutput() {
+  const text = document.getElementById('output').innerText;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('btn-copy');
+    btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = 'Copy', 1500);
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Print Chart — combined view for all active patients
+// ---------------------------------------------------------------------------
+async function printChart() {
+  if (!aiAvailable) {
+    switchTab('generate');
+    const outputEl = document.getElementById('output');
+    outputEl.className = 'output empty';
+    outputEl.textContent = 'No API key configured. Open Settings in the portal sidebar to enter your OpenRouter key.';
+    return;
+  }
+
+  const genType = currentGenType || 'sbar';
+  const outputEl = document.getElementById('output');
+  switchTab('generate');
+
+  outputEl.className = 'output';
+  outputEl.innerHTML = '<div class="loading"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div><p style="font-family:var(--mono);font-size:0.75rem;color:var(--text-dim);margin-top:1rem;">Generating printable chart for all active patients...</p>';
+
+  try {
+    const res = await fetch('/api/export/chart', {
+      method: 'POST',
+      headers: getApiHeaders(),
+      body: JSON.stringify({ type: genType }),
+    });
+    const data = await res.json();
+
+    if (data.patients.length === 0) {
+      outputEl.className = 'output empty';
+      outputEl.textContent = 'No active patients found.';
+      return;
+    }
+
+    const typeLabel = {sbar:'SBAR Handoff', progress:'Progress Note', discharge:'Discharge Summary', discharge_chrono:'Chronological Discharge'}[genType] || genType;
+
+    // Build print-ready HTML
+    let printHtml = `<!DOCTYPE html>
+<html><head><meta charset="UTF-8">
+<title>Patient Chart — ${esc(typeLabel)} — ${data.generated}</title>
+<style>
+  @page { margin: 1.5cm; size: A4; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 11px; line-height: 1.5; color: #1a1a1a; }
+  .chart-header { text-align: center; padding: 8px 0 12px; border-bottom: 2px solid #333; margin-bottom: 16px; }
+  .chart-header h1 { font-size: 16px; font-weight: 700; }
+  .chart-header .meta { font-size: 10px; color: #666; margin-top: 2px; }
+  .patient-section { page-break-inside: avoid; margin-bottom: 18px; border: 1px solid #ddd; border-radius: 4px; overflow: hidden; }
+  .patient-header { background: #f0f4f8; padding: 6px 12px; border-bottom: 1px solid #ddd; display: flex; justify-content: space-between; align-items: center; }
+  .patient-header .name { font-weight: 700; font-size: 13px; }
+  .patient-header .info { font-size: 10px; color: #555; }
+  .patient-body { padding: 10px 14px; font-size: 11px; line-height: 1.6; white-space: pre-wrap; }
+  .patient-body h2 { font-size: 11px; font-weight: 700; color: #0066cc; margin: 10px 0 3px; border-bottom: 1px solid #eee; padding-bottom: 2px; }
+  .patient-body h3 { font-size: 11px; font-weight: 700; color: #333; margin: 8px 0 2px; }
+  .patient-body ul { padding-left: 16px; margin: 2px 0 6px; }
+  .patient-body li { margin-bottom: 1px; }
+  .patient-body strong { font-weight: 600; }
+  .patient-body hr { border: none; border-top: 1px dashed #ccc; margin: 8px 0; }
+  .no-print { padding: 10px; text-align: center; background: #f0f4f8; border-bottom: 1px solid #ddd; }
+  .no-print button { padding: 6px 20px; font-size: 13px; font-weight: 600; cursor: pointer; border: 1px solid #0066cc; background: #0066cc; color: #fff; border-radius: 4px; }
+  @media print { .no-print { display: none; } .patient-section { break-inside: avoid; } }
+</style>
+</head><body>
+<div class="no-print">
+  <button onclick="window.print()">Print</button>
+  <span style="margin-left:12px;font-size:11px;color:#666;">${data.patients.length} patient(s) — ${esc(typeLabel)}</span>
+</div>
+<div class="chart-header">
+  <h1>Patient Handoff Chart</h1>
+  <div class="meta">${esc(typeLabel)} — Generated ${data.generated} — ${data.patients.length} active patient(s)</div>
+</div>`;
+
+    for (const p of data.patients) {
+      printHtml += `
+<div class="patient-section">
+  <div class="patient-header">
+    <span class="name">${esc(p.name)}</span>
+    <span class="info">${esc(p.dx || '—')} | Admitted: ${esc(p.admitted || '—')}</span>
+  </div>
+  <div class="patient-body">${renderMarkdown(p.note)}</div>
+</div>`;
+    }
+    printHtml += '</body></html>';
+
+    // Ask parent portal to open the print window (iframes can't open popups)
+    if (window.parent !== window) {
+      window.parent.postMessage({ type: 'open-print-chart', html: printHtml }, '*');
+    } else {
+      // Direct open if not in iframe
+      const printWin = window.open('', '_blank');
+      if (printWin) {
+        printWin.document.write(printHtml);
+        printWin.document.close();
+      }
+    }
+
+    // Show in the output panel too
+    outputEl.innerHTML = '<p style="font-family:var(--mono);font-size:0.75rem;color:var(--green);margin-bottom:1rem;">&#10003; Chart opened in new window. Use the Print button or Ctrl+P to print.</p>';
+    for (const p of data.patients) {
+      outputEl.innerHTML += `<h2>${esc(p.name)}</h2>${renderMarkdown(p.note)}<hr>`;
+    }
+    document.getElementById('btn-copy').style.display = 'inline-block';
+  } catch (err) {
+    outputEl.className = 'output empty';
+    outputEl.textContent = `Error: ${err.message}`;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Batch SBAR
+// ---------------------------------------------------------------------------
+async function batchSBAR() {
+  if (!aiAvailable) {
+    switchTab('generate');
+    const outputEl = document.getElementById('output');
+    outputEl.className = 'output empty';
+    outputEl.textContent = 'No API key configured. Open Settings in the portal sidebar to enter your OpenRouter key.';
+    return;
+  }
+
+  const outputEl = document.getElementById('output');
+  // Switch to generate tab
+  switchTab('generate');
+  setGenType(document.querySelector('[data-type="sbar"]'));
+
+  outputEl.className = 'output';
+  outputEl.innerHTML = '<div class="loading"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div><p style="font-family:var(--mono);font-size:0.75rem;color:var(--text-dim);margin-top:1rem;">Generating SBAR for all active patients... This may take a minute.</p>';
+
+  try {
+    const res = await fetch('/api/generate/batch-sbar', { method: 'POST', headers: getApiHeaders() });
+    const results = await res.json();
+
+    if (results.length === 0) {
+      outputEl.className = 'output empty';
+      outputEl.textContent = 'No active patients found.';
+      return;
+    }
+
+    let html = '<h2>Batch SBAR Handoff Notes</h2>';
+    for (const r of results) {
+      html += `<h2>${esc(r.name)}</h2>`;
+      if (r.error) {
+        html += `<p style="color:var(--red);">Error: ${esc(r.error)}</p>`;
+      } else {
+        html += renderMarkdown(r.note);
+      }
+      html += '<hr>';
+    }
+    outputEl.innerHTML = html;
+    document.getElementById('btn-copy').style.display = 'inline-block';
+  } catch (err) {
+    outputEl.className = 'output empty';
+    outputEl.textContent = `Error: ${err.message}`;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Markdown renderer
+// ---------------------------------------------------------------------------
+function renderMarkdown(md) {
+  return md
+    .replace(/^---+$/gm, '<hr>')
+    .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/^- (.+)$/gm, '<li>$1</li>')
+    .replace(/((?:<li>.*<\/li>\n?)+)/g, '<ul>$1</ul>')
+    .replace(/^(?!<[hul]|<hr)(.+)$/gm, '<p>$1</p>')
+    .replace(/\n{2,}/g, '\n');
+}
+
+function esc(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+// ---------------------------------------------------------------------------
+// Lab Paste — smart detection + structured table formatting
+// ---------------------------------------------------------------------------
+let pendingLabData = null;  // holds parsed lab rows until user accepts
+
+// Intercept paste events on the append textarea
+document.addEventListener('DOMContentLoaded', () => {
+  const input = document.getElementById('append-input');
+  if (!input) return;
+
+  input.addEventListener('paste', function(e) {
+    // Only activate smart parsing when in Labs category
+    if (currentCategory !== 'Labs') return;
+
+    const htmlData = e.clipboardData.getData('text/html');
+    const textData = e.clipboardData.getData('text/plain');
+
+    // Try HTML table parsing first
+    let labRows = [];
+    let headerInfo = '';
+
+    if (htmlData && htmlData.includes('<t')) {
+      const result = parseLabHtml(htmlData);
+      labRows = result.rows;
+      headerInfo = result.header;
+    }
+
+    // If no HTML table found, try text-based detection
+    if (labRows.length === 0 && textData) {
+      const result = parseLabText(textData);
+      labRows = result.rows;
+      headerInfo = result.header;
+    }
+
+    // If we parsed lab data, show the banner instead of raw paste
+    if (labRows.length > 0) {
+      e.preventDefault();  // block the raw paste
+      pendingLabData = { rows: labRows, header: headerInfo };
+      showLabBanner(labRows, headerInfo);
+    }
+    // Otherwise let the normal paste go through (manual text entry)
+  });
+});
+
+function parseLabHtml(html) {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, 'text/html');
+  const rows = [];
+  let header = '';
+
+  // Try to extract header info (科室, 採檢 date, etc.)
+  const fullText = doc.body ? doc.body.textContent : '';
+  const headerMatch = fullText.match(/科室[:：]?\s*(\S+).*?採檢[:：]?\s*(\S+\s*\S*)/);
+  if (headerMatch) {
+    header = `科室: ${headerMatch[1]} | 採檢: ${headerMatch[2]}`;
+  }
+
+  // Find all table rows
+  const trs = doc.querySelectorAll('tr');
+  for (const tr of trs) {
+    const cells = tr.querySelectorAll('td, th');
+    if (cells.length < 2) continue;
+
+    const name = (cells[0].textContent || '').trim();
+    const value = (cells[1].textContent || '').trim();
+    const unit = cells.length > 2 ? (cells[2].textContent || '').trim() : '';
+    const ref = cells.length > 3 ? (cells[3].textContent || '').trim() : '';
+
+    // Skip header row
+    if (name === '檢驗項目' || name === 'Test' || name === 'Item') continue;
+    if (!name || !value) continue;
+
+    rows.push({ name, value, unit, ref });
+  }
+
+  // If no structured rows found, try flat cell approach
+  if (rows.length === 0) {
+    const allCells = doc.querySelectorAll('td');
+    const cellTexts = Array.from(allCells).map(c => c.textContent.trim()).filter(Boolean);
+    // Try grouping in chunks of 4 (name, value, unit, ref) or 2 (name, value)
+    if (cellTexts.length >= 4 && cellTexts.length % 4 === 0) {
+      for (let i = 0; i < cellTexts.length; i += 4) {
+        if (cellTexts[i] === '檢驗項目') continue;
+        rows.push({ name: cellTexts[i], value: cellTexts[i+1], unit: cellTexts[i+2] || '', ref: cellTexts[i+3] || '' });
+      }
+    }
+  }
+
+  return { rows, header };
+}
+
+function parseLabText(text) {
+  const rows = [];
+  let header = '';
+
+  // Extract header
+  const headerMatch = text.match(/科室[:：]?\s*(\S+).*?採檢[:：]?\s*(\S+\s*\S*)/);
+  if (headerMatch) {
+    header = `科室: ${headerMatch[1]} | 採檢: ${headerMatch[2]}`;
+  }
+
+  // Try tab-separated format first
+  const lines = text.split('\n');
+  for (const line of lines) {
+    const parts = line.split('\t').map(s => s.trim()).filter(Boolean);
+    if (parts.length >= 2) {
+      if (parts[0] === '檢驗項目') continue;
+      rows.push({ name: parts[0], value: parts[1], unit: parts[2] || '', ref: parts[3] || '' });
+    }
+  }
+
+  return { rows, header };
+}
+
+function showLabBanner(labRows, headerInfo) {
+  const banner = document.getElementById('lab-paste-banner');
+  const preview = document.getElementById('lab-table-preview');
+  const summary = document.getElementById('lab-parsed-summary');
+
+  summary.textContent = `Detected ${labRows.length} lab items${headerInfo ? ' — ' + headerInfo : ''}`;
+  banner.classList.add('show');
+
+  // Build preview table
+  let html = '<table><thead><tr><th>Test</th><th>Value</th><th>Unit</th><th>Reference</th></tr></thead><tbody>';
+  for (const row of labRows) {
+    // Check if value is outside reference range
+    let abnormal = false;
+    if (row.ref && row.value) {
+      const numVal = parseFloat(row.value);
+      if (!isNaN(numVal)) {
+        const refMatch = row.ref.match(/([\d.]+)\s*[-~]\s*([\d.]+)/);
+        if (refMatch) {
+          const lo = parseFloat(refMatch[1]), hi = parseFloat(refMatch[2]);
+          if (numVal < lo || numVal > hi) abnormal = true;
+        }
+      }
+    }
+    html += `<tr>
+      <td class="name-col">${esc(row.name)}</td>
+      <td${abnormal ? ' class="abnormal"' : ''}>${esc(row.value)}</td>
+      <td>${esc(row.unit)}</td>
+      <td>${esc(row.ref)}</td>
+    </tr>`;
+  }
+  html += '</tbody></table>';
+  preview.innerHTML = html;
+  preview.classList.add('show');
+}
+
+function acceptLabPaste() {
+  if (!pendingLabData) return;
+
+  // Format as structured markdown table
+  const { rows, header } = pendingLabData;
+  let md = '';
+  if (header) md += header + '\n';
+  md += '| Test | Value | Unit | Reference |\n';
+  md += '|------|-------|------|-----------|\n';
+  for (const row of rows) {
+    md += `| ${row.name} | ${row.value} | ${row.unit} | ${row.ref} |\n`;
+  }
+
+  // Insert into the textarea
+  const input = document.getElementById('append-input');
+  input.value = md.trim();
+  dismissLabBanner();
+  pendingLabData = null;
+}
+
+function dismissLabBanner() {
+  document.getElementById('lab-paste-banner').classList.remove('show');
+  document.getElementById('lab-table-preview').classList.remove('show');
+  // If dismissing without accepting, put raw text back
+  if (pendingLabData && !document.getElementById('append-input').value.trim()) {
+    // Let user type manually — don't force anything
+  }
+  pendingLabData = null;
+}
+
+// ---------------------------------------------------------------------------
+// Keyboard shortcuts
+// ---------------------------------------------------------------------------
+document.addEventListener('keydown', (e) => {
+  // Ctrl+Enter in append textarea
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+    const active = document.querySelector('.tab.active');
+    if (active && active.dataset.tab === 'append') {
+      e.preventDefault();
+      appendData();
+    } else if (active && active.dataset.tab === 'generate') {
+      e.preventDefault();
+      generateNote();
+    }
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Init
+// ---------------------------------------------------------------------------
+
+// Show platform-aware keyboard shortcut hints
+const modKey = navigator.platform.includes('Mac') ? '\u2318' : 'Ctrl';
+const hint = `${modKey}\u23CE`;
+document.getElementById('kbd-append').textContent = hint;
+document.getElementById('kbd-generate').textContent = hint;
+
+loadPatients();
+
+// ---------------------------------------------------------------------------
+// Theme sync — listen to portal parent for theme changes
+// ---------------------------------------------------------------------------
+(function initTheme() {
+  const THEME_KEY = 'medical-portal-theme';
+  function apply(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+  }
+  // Read from localStorage first (works even outside iframe)
+  apply(localStorage.getItem(THEME_KEY) || 'light');
+  // Listen for portal broadcasts
+  window.addEventListener('message', e => {
+    if (e.data && e.data.type === 'theme-change') {
+      apply(e.data.theme);
+      try { localStorage.setItem(THEME_KEY, e.data.theme); } catch(err) {}
+    }
+  });
+  // Ask parent for current theme (in case iframe loaded before broadcast)
+  if (window.parent !== window) {
+    try { window.parent.postMessage({ type: 'theme-request' }, '*'); } catch(err) {}
+  }
+})();
+</script>
+</body>
+</html>
