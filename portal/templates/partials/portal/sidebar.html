@@ -1,0 +1,85 @@
+<!-- Sidebar -->
+<div class="sidebar" id="sidebar">
+  <div class="sidebar-brand">
+    <button class="sidebar-toggle" onclick="toggleSidebar()" title="Toggle sidebar">&#9776;</button>
+    <div class="sidebar-brand-text">
+      <h1>{{ portal_config.brand_name }}</h1>
+      <span>{{ portal_config.brand_tagline }}</span>
+    </div>
+  </div>
+
+  <div class="nav">
+    <button class="nav-item active" onclick="switchView('handoff')" data-view="handoff" title="Handoff Tool">
+      <span class="nav-icon">&#128203;</span>
+      <span class="nav-label">Handoff Tool</span>
+      <span class="status-dot" id="dot-handoff"></span>
+    </button>
+    <button class="nav-item" onclick="switchView('admissions')" data-view="admissions" title="Admissions">
+      <span class="nav-icon">&#128221;</span>
+      <span class="nav-label">Admissions</span>
+      <span class="status-dot" id="dot-admissions"></span>
+    </button>
+    <button class="nav-item" onclick="switchView('phi')" data-view="phi" title="PHI Remover">
+      <span class="nav-icon">&#128274;</span>
+      <span class="nav-label">PHI Remover</span>
+      <span class="status-dot alive" id="dot-phi"></span>
+    </button>
+    <button class="nav-item" onclick="switchView('calculator')" data-view="calculator" title="Clinical Calculator (Alt+4)">
+      <span class="nav-icon">&#129658;</span>
+      <span class="nav-label">Calculator</span>
+      <span class="status-dot alive" id="dot-calculator"></span>
+    </button>
+    <button class="nav-item" onclick="switchView('census')" data-view="census" title="Patient Census (Alt+5)">
+      <span class="nav-icon">&#128101;</span>
+      <span class="nav-label">Census Board</span>
+      <span class="status-dot alive" id="dot-census"></span>
+    </button>
+    <button class="nav-item" onclick="switchView('casemaker')" data-view="casemaker" title="Casemaker (CLI only) (Alt+8)">
+      <span class="nav-icon">&#128202;</span>
+      <span class="nav-label">Casemaker</span>
+      <span class="status-dot" id="dot-casemaker" style="background:var(--warn)"></span>
+    </button>
+  </div>
+
+  <!-- Music Player -->
+  <div class="music-player" id="music-player">
+    <!-- Track list panel (shown/hidden by ☰ button) -->
+    <div class="music-list-panel" id="music-list-panel" style="display:none">
+      <div class="music-empty" id="music-list-empty">Loading...</div>
+    </div>
+    <!-- Now-playing row -->
+    <div class="music-top">
+      <span style="font-size:0.78rem;flex-shrink:0;line-height:1">🎵</span>
+      <span class="music-track-name idle" id="music-track-name">No music</span>
+      <button class="music-btn" id="music-list-btn" onclick="toggleMusicList()" title="Track list">☰</button>
+    </div>
+    <!-- Seek bar (hidden until a track is loaded) -->
+    <input type="range" class="music-progress" id="music-progress" min="0" max="1" step="0.001" value="0" style="display:none">
+    <!-- Controls -->
+    <div class="music-controls">
+      <button class="music-btn" onclick="prevTrack()" title="Previous">⏮</button>
+      <button class="music-btn" id="music-play-btn" onclick="togglePlay()" title="Play / Pause">▶</button>
+      <button class="music-btn" onclick="nextTrack()" title="Next">⏭</button>
+      <button class="music-btn" id="music-shuffle-btn" onclick="toggleShuffle()" title="Shuffle">⇄</button>
+      <button class="music-btn" id="music-loop-btn" onclick="toggleLoop()" title="Loop">↻</button>
+      <div class="music-vol-wrap">
+        <span style="font-size:0.65rem;color:var(--text-dim);line-height:1">🔊</span>
+        <input type="range" class="music-vol" id="music-vol" min="0" max="1" step="0.02" value="0.7" oninput="setMusicVolume(this.value)" title="Volume">
+      </div>
+    </div>
+    <audio id="music-audio" preload="metadata"></audio>
+  </div>
+
+  <div class="sidebar-footer">
+    <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()" title="Toggle light/dark theme">
+      <span id="theme-icon">&#9788;</span>
+      <span class="theme-label" id="theme-label">Light</span>
+    </button>
+    <button class="settings-toggle" id="settings-toggle" onclick="openSettings()" title="Settings">
+      <span>&#9881;</span>
+      <span class="settings-label">Settings</span>
+    </button><br>
+    Medical Portal v1.0<br>
+    {{ portal_config.footer_note }}
+  </div>
+</div>

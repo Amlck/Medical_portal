@@ -9,6 +9,7 @@ import re
 import sys
 import glob
 import datetime
+from pathlib import Path
 import requests as http_requests
 from flask import Flask, render_template, request, jsonify
 from dotenv import load_dotenv
@@ -80,13 +81,12 @@ def scrub_phi_for_llm(text):
     Returns the scrubbed text and a count dict of what was removed.
     """
     if not PHI_SCRUB_AVAILABLE:
-        return text, {}
+        raise RuntimeError("PHI scrubbing is unavailable; refusing outbound LLM request.")
     try:
         scrubbed, counts = _redact_phi(text, keep_dates=True)
         return scrubbed, counts
     except Exception as e:
-        print(f"  [WARNING] PHI scrub failed: {e} — sending unscrubbed")
-        return text, {}
+        raise RuntimeError(f"PHI scrubbing failed; refusing outbound LLM request: {e}") from e
 
 
 def get_api_key():
@@ -153,7 +153,7 @@ def list_patients():
     patients = []
     for fpath in get_patient_files():
         pid = patient_id_from_filename(fpath)
-        content = open(fpath, "r", encoding="utf-8").read()
+        content = Path(fpath).read_text(encoding="utf-8")
         info = parse_patient_header(content)
         patients.append({
             "id": pid,
@@ -183,7 +183,7 @@ def create_patient():
         return jsonify({"error": "Patient file already exists."}), 409
 
     # Read template and fill in header
-    template = open(TEMPLATE_PATH, "r", encoding="utf-8").read()
+    template = Path(TEMPLATE_PATH).read_text(encoding="utf-8")
     content = template.replace("[Name]", name)
 
     # Fill in provided fields
@@ -213,7 +213,7 @@ def get_patient(pid):
     filepath = os.path.join(PATIENTS_DIR, f"{pid}.md")
     if not os.path.exists(filepath):
         return jsonify({"error": "Patient not found."}), 404
-    content = open(filepath, "r", encoding="utf-8").read()
+    content = Path(filepath).read_text(encoding="utf-8")
     info = parse_patient_header(content)
     return jsonify({"id": pid, "content": content, **info})
 
@@ -280,17 +280,15 @@ def generate():
     if not os.path.exists(filepath):
         return jsonify({"error": "Patient not found."}), 404
 
-    patient_record = open(filepath, "r", encoding="utf-8").read()
+    patient_record = Path(filepath).read_text(encoding="utf-8")
     today = datetime.date.today().isoformat()
 
-    # Scrub PHI before sending to external LLM
-    scrubbed_record, phi_counts = scrub_phi_for_llm(patient_record)
-
-    prompt_pair = PROMPTS[note_type]
-    system_prompt = prompt_pair["system"].replace("{today}", today)
-    user_message = prompt_pair["user"].format(patient_record=scrubbed_record)
-
     try:
+        # Scrub PHI before sending to external LLM
+        scrubbed_record, phi_counts = scrub_phi_for_llm(patient_record)
+        prompt_pair = PROMPTS[note_type]
+        system_prompt = prompt_pair["system"].replace("{today}", today)
+        user_message = prompt_pair["user"].format(patient_record=scrubbed_record)
         result_text = call_llm(system_prompt, user_message)
         return jsonify({"note": result_text, "type": note_type, "phi_scrubbed": sum(phi_counts.values())})
     except http_requests.exceptions.HTTPError as e:
@@ -315,17 +313,15 @@ def batch_sbar():
         if pid.endswith("_dc"):
             continue  # skip discharged
 
-        patient_record = open(fpath, "r", encoding="utf-8").read()
+        patient_record = Path(fpath).read_text(encoding="utf-8")
         info = parse_patient_header(patient_record)
 
-        # Scrub PHI before sending to external LLM
-        scrubbed_record, _ = scrub_phi_for_llm(patient_record)
-
-        prompt_pair = PROMPTS["sbar"]
-        system_prompt = prompt_pair["system"].replace("{today}", today)
-        user_message = prompt_pair["user"].format(patient_record=scrubbed_record)
-
         try:
+            # Scrub PHI before sending to external LLM
+            scrubbed_record, _ = scrub_phi_for_llm(patient_record)
+            prompt_pair = PROMPTS["sbar"]
+            system_prompt = prompt_pair["system"].replace("{today}", today)
+            user_message = prompt_pair["user"].format(patient_record=scrubbed_record)
             note = call_llm(system_prompt, user_message)
             results.append({"id": pid, "name": info["name"], "note": note, "error": None})
         except Exception as e:
@@ -351,16 +347,16 @@ def export_chart():
         if pid.endswith("_dc"):
             continue  # skip discharged
 
-        patient_record = open(fpath, "r", encoding="utf-8").read()
+        patient_record = Path(fpath).read_text(encoding="utf-8")
         info = parse_patient_header(patient_record)
 
         if note_type in PROMPTS:
-            # Scrub PHI before sending to external LLM
-            scrubbed_record, _ = scrub_phi_for_llm(patient_record)
-            prompt_pair = PROMPTS[note_type]
-            system_prompt = prompt_pair["system"].replace("{today}", today)
-            user_message = prompt_pair["user"].format(patient_record=scrubbed_record)
             try:
+                # Scrub PHI before sending to external LLM
+                scrubbed_record, _ = scrub_phi_for_llm(patient_record)
+                prompt_pair = PROMPTS[note_type]
+                system_prompt = prompt_pair["system"].replace("{today}", today)
+                user_message = prompt_pair["user"].format(patient_record=scrubbed_record)
                 note = call_llm(system_prompt, user_message)
             except Exception as e:
                 note = f"Error generating note: {str(e)}"

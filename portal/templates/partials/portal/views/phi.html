@@ -1,0 +1,59 @@
+<!-- PHI Remover -->
+<div class="view" id="view-phi">
+  <div class="phi-panel">
+    <div class="phi-header">
+      <h2>PHI Remover</h2>
+      <p>Upload a medical PDF to de-identify. Removes names, IDs, dates, phone numbers, addresses, and other protected health information using HIPAA Safe Harbor patterns.</p>
+      <div style="margin-top:8px; display:flex; gap:0.5rem; align-items:center;">
+        <button class="btn-secondary" onclick="togglePhiFiles()" id="phi-files-toggle" style="font-size:0.6rem; padding:0.3rem 0.6rem;">Saved Files <span id="phi-files-count"></span></button>
+        <button class="btn-secondary" onclick="clearAllPhiFiles()" id="phi-clear-all" style="font-size:0.6rem; padding:0.3rem 0.6rem; color:var(--red); border-color:var(--red); display:none;">Clear All</button>
+      </div>
+    </div>
+
+    <!-- PHI file manager -->
+    <div id="phi-file-manager" style="display:none; border-bottom:1px solid var(--border); max-height:200px; overflow-y:auto; background:var(--surface);">
+      <div id="phi-file-list" style="padding:0.5rem;"></div>
+    </div>
+
+    <div class="phi-body">
+      <!-- Upload state -->
+      <div class="phi-upload-zone" id="phi-upload-state">
+        <div class="drop-area" id="drop-area" onclick="document.getElementById('phi-file-input').click()">
+          <div class="drop-icon">&#128196;</div>
+          <div class="drop-text">Drop a PDF here, or click to browse</div>
+          <div class="drop-hint">Max 50 MB &middot; PDF files only</div>
+        </div>
+        <input type="file" id="phi-file-input" accept=".pdf" />
+        <div class="phi-options">
+          <label>
+            <input type="checkbox" id="phi-keep-dates" checked />
+            Keep dates (DOB, admission/discharge dates)
+          </label>
+        </div>
+      </div>
+
+      <!-- Processing state -->
+      <div class="phi-processing" id="phi-processing-state">
+        <div class="spinner"></div>
+        <span style="font-size:0.75rem; color:var(--text-dim);">De-identifying document...</span>
+        <span style="font-size:0.6rem; color:var(--text-dim); opacity:0.6;" id="phi-proc-file"></span>
+      </div>
+
+      <!-- Results state -->
+      <div class="phi-results" id="phi-results-state">
+        <div class="result-header">
+          <span class="result-title" id="result-title">De-identification Complete</span>
+          <span class="result-meta" id="result-meta"></span>
+          <div class="result-actions">
+            <button class="btn-green" onclick="downloadResult()">Download .txt</button>
+            <button class="btn-secondary" onclick="resetPhi()">Process Another</button>
+          </div>
+        </div>
+        <div class="result-body">
+          <div class="result-summary" id="result-summary"></div>
+          <div class="result-preview" id="result-preview"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

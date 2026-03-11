@@ -1,0 +1,30 @@
+<!-- Settings Modal -->
+<div class="settings-overlay" id="settings-overlay" onclick="if(event.target===this)closeSettings()">
+  <div class="settings-modal">
+    <div class="settings-modal-header">
+      <h3>&#9881; Settings</h3>
+      <button class="settings-modal-close" onclick="closeSettings()" title="Close">&times;</button>
+    </div>
+    <div class="settings-modal-body">
+      <div class="settings-field">
+        <label>OpenRouter API Key</label>
+        <p class="field-hint">
+          Required for AI features (SBAR generation, progress notes, batch export).
+          Get a key at <a href="https://openrouter.ai/keys" target="_blank" rel="noopener" style="color:var(--accent)">openrouter.ai/keys</a>.
+          Your key is stored locally in this browser only.
+        </p>
+        <div class="settings-input-row" style="margin-top:0.5rem;">
+          <input type="password" id="settings-api-key" placeholder="sk-or-v1-..." autocomplete="off" spellcheck="false">
+          <button onclick="toggleKeyVisibility()" id="settings-eye-btn" title="Show/hide key">&#128065;</button>
+          <button class="settings-save-btn" onclick="saveApiKey()">Save</button>
+        </div>
+        <div class="settings-input-row" style="margin-top:0.4rem;">
+          <button onclick="testApiKey()" style="font-size:0.62rem;">Test Connection</button>
+          <button onclick="clearApiKey()" style="font-size:0.62rem; color:var(--red); border-color:var(--red);">Remove Key</button>
+        </div>
+        <div class="settings-status" id="settings-status"></div>
+        <div class="api-key-indicator" id="api-key-indicator"></div>
+      </div>
+    </div>
+  </div>
+</div>

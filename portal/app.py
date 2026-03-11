@@ -9,6 +9,7 @@ Sub-services are reverse-proxied through the portal so iframes are
 same-origin — avoids all cross-port / cross-origin browser issues.
 """
 
+import json
 import os
 import sys
 import signal
@@ -32,6 +33,9 @@ HANDOFF_DIR = MEDICAL_DIR / "Dr_claude" / "handoff-tool"
 ADMISSIONS_DIR = MEDICAL_DIR / "Admissions" / "dist"
 UPLOAD_DIR = PORTAL_DIR / "uploads"
 UPLOAD_DIR.mkdir(exist_ok=True)
+MUSIC_DIR = PORTAL_DIR / "static" / "music"
+MUSIC_DIR.mkdir(parents=True, exist_ok=True)
+MUSIC_EXTENSIONS = {'.mp3', '.ogg', '.wav', '.flac', '.m4a', '.aac', '.opus', '.webm'}
 
 # Import PHI Remover functions
 sys.path.insert(0, str(MEDICAL_DIR))
@@ -42,6 +46,15 @@ from phi_remover import extract_text_from_pdf, clean_text, redact_phi, generate_
 # ---------------------------------------------------------------------------
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50 MB upload limit
+
+DEFAULT_PORTAL_CONFIG = {
+    "portal_title": "Medical Portal — Clinical Tools",
+    "brand_name": "MEDICAL PORTAL",
+    "brand_tagline": "Clinical Tools",
+    "footer_note": "",
+    "lab_paste_toggle_label": "Paste Lab Data",
+    "lab_paste_placeholder": "Paste lab report here",
+}
 
 # ---------------------------------------------------------------------------
 # Child process management
@@ -72,13 +85,19 @@ def start_service(name, cmd, cwd, port, env=None):
         merged_env.update(env)
 
     try:
+        popen_kwargs = {
+            "cwd": str(cwd),
+            "env": merged_env,
+            "stdout": subprocess.DEVNULL,
+            "stderr": subprocess.DEVNULL,
+        }
+        if os.name == "nt":
+            popen_kwargs["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
+        else:
+            popen_kwargs["preexec_fn"] = os.setsid
         proc = subprocess.Popen(
             cmd,
-            cwd=str(cwd),
-            env=merged_env,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            preexec_fn=os.setsid,
+            **popen_kwargs,
         )
         child_processes[name] = {"process": proc, "port": port, "status": "started"}
         print(f"  [{name}] Started on internal port {port} (PID {proc.pid})")
@@ -95,12 +114,18 @@ def stop_all_services():
         proc = info.get("process")
         if proc and proc.poll() is None:
             try:
-                os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
+                if os.name == "nt":
+                    proc.terminate()
+                else:
+                    os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
                 proc.wait(timeout=5)
                 print(f"  [{name}] Stopped")
             except Exception:
                 try:
-                    os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+                    if os.name == "nt":
+                        proc.kill()
+                    else:
+                        os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
                     print(f"  [{name}] Force-killed")
                 except Exception:
                     pass
@@ -489,6 +514,8 @@ def serve_admissions(path):
     # For the main HTML, inject theme support and serve with proper headers
     if path == 'index.html':
         content = file_path.read_text(encoding='utf-8')
+        # Align the Admissions bundle with the portal's shared localStorage key.
+        content = content.replace('"openrouterApiKey"', '"medical-portal-api-key"')
         # Inject dark-mode CSS + theme listener before </head>
         content = content.replace('</head>', ADMISSIONS_THEME_INJECTION + ADMISSIONS_HANDOFF_INJECTION + '</head>', 1)
         return Response(
@@ -509,9 +536,47 @@ def serve_admissions(path):
 # Portal routes
 # ---------------------------------------------------------------------------
 
+@app.route('/static/<path:filename>')
+def serve_static(filename):
+    """Serve static assets from portal/static/. conditional=True enables audio seeking."""
+    static_dir = PORTAL_DIR / 'static'
+    file_path = static_dir / filename
+    if not file_path.exists() or not file_path.is_file():
+        return 'Not found', 404
+    if not file_path.resolve().is_relative_to(static_dir.resolve()):
+        return 'Forbidden', 403
+    return send_file(str(file_path), conditional=True)
+
+
+@app.route('/api/music')
+def list_music():
+    """Return sorted list of audio filenames in static/music/."""
+    files = sorted(
+        f.name for f in MUSIC_DIR.iterdir()
+        if f.is_file() and f.suffix.lower() in MUSIC_EXTENSIONS
+    )
+    return jsonify(files)
+
 @app.route('/')
 def index():
-    return render_template('index.html')
+    config = DEFAULT_PORTAL_CONFIG.copy()
+    config_path = PORTAL_DIR / 'site_config.json'
+    if config_path.exists():
+        try:
+            config.update(json.loads(config_path.read_text(encoding='utf-8')))
+        except (OSError, json.JSONDecodeError) as exc:
+            print(f"  [portal] Failed to load site_config.json: {exc}")
+    asset_versions = {}
+    for key, rel_path in {
+        "portal_shell_js": "static/js/portal-shell.js",
+        "portal_phi_js": "static/js/portal-phi.js",
+        "portal_calculators_js": "static/js/portal-calculators.js",
+        "portal_music_js": "static/js/portal-music.js",
+        "portal_nav_js": "static/js/portal-nav.js",
+    }.items():
+        path = PORTAL_DIR / rel_path
+        asset_versions[key] = int(path.stat().st_mtime) if path.exists() else 0
+    return render_template('index.html', portal_config=config, asset_versions=asset_versions)
 
 
 @app.route('/lab-mappings.json')
@@ -527,8 +592,8 @@ def lab_mappings():
 def api_status():
     """Return running status of each managed service."""
     status = {}
-    for name, info in child_processes.items():
-        port = info["port"]
+    for name, port in SERVICES.items():
+        info = child_processes.get(name, {"process": None, "port": port, "status": "stopped"})
         proc = info.get("process")
 
         if info["status"] == "external":

@@ -1,0 +1,435 @@
+<!-- Clinical Calculator -->
+<div class="view" id="view-calculator">
+  <div class="calc-panel">
+    <div class="calc-header">
+      <h2>Clinical Calculator</h2>
+      <p>Common bedside scoring tools. All calculations run locally — no API calls needed.</p>
+      <div class="calc-patient-loader">
+        <label style="font-size:0.65rem;color:var(--text-dim);">Load patient data:</label>
+        <select id="calc-patient-select" onchange="loadPatientIntoCalc(this.value)" style="font-family:var(--mono);font-size:0.65rem;padding:0.25rem 0.4rem;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--text);max-width:220px;">
+          <option value="">— Select patient —</option>
+        </select>
+        <span id="calc-patient-status" style="font-size:0.6rem;color:var(--green);display:none;"></span>
+      </div>
+      <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;margin-top:0.25rem;">
+        <button id="copy-all-results-btn" class="btn-secondary" onclick="copyAllResults(this)" style="font-size:0.62rem;padding:0.25rem 0.8rem;" title="Copy all non-empty calculator results to clipboard">⧉ Copy All Results</button>
+        <button class="btn-secondary" onclick="toggleLabTrends()" id="lab-trends-toggle-btn" style="font-size:0.62rem;padding:0.25rem 0.8rem;" title="Show lab trends from patient record">&#128200; Lab Trends</button>
+      </div>
+      <div id="lab-trends-panel" style="display:none;margin-top:0.5rem;border:1px solid var(--border);border-radius:6px;padding:0.6rem;background:var(--bg-alt);font-family:var(--mono);font-size:0.62rem;">
+        <div id="lab-trends-content" style="color:var(--text-dim);">Load a patient above to view lab trends.</div>
+      </div>
+      <div class="calc-lab-paste">
+        <button class="calc-lab-paste-toggle" onclick="toggleLabPaste()">
+          <span id="lab-paste-arrow">&#9654;</span> {{ portal_config.lab_paste_toggle_label }}
+        </button>
+        <div class="calc-lab-paste-area" id="lab-paste-area">
+          <div contenteditable="true" class="calc-lab-paste-box" id="lab-paste-box" placeholder="{{ portal_config.lab_paste_placeholder }}"></div>
+          <div style="display:flex;gap:0.5rem;margin-top:0.4rem;align-items:center;">
+            <button class="btn-primary" onclick="parseLabPaste()" style="font-size:0.62rem;padding:0.25rem 0.7rem;">Parse &amp; Fill</button>
+            <button class="btn-secondary" onclick="clearLabPaste()" style="font-size:0.62rem;padding:0.25rem 0.7rem;">Clear</button>
+            <span style="font-size:0.58rem;color:var(--text-dim);">Supports HTML table paste (best) and plain text</span>
+          </div>
+          <div class="calc-lab-parsed" id="lab-parsed-status"></div>
+        </div>
+      </div>
+    </div>
+    <!-- Category filter tabs -->
+    <div class="calc-cats" id="calc-cats">
+      <button class="calc-cat-btn active" onclick="switchCalcCat('all')">All<span class="cat-count">(21)</span></button>
+      <button class="calc-cat-btn" onclick="switchCalcCat('general')">General<span class="cat-count">(3)</span></button>
+      <button class="calc-cat-btn" onclick="switchCalcCat('renal')">Renal<span class="cat-count">(4)</span></button>
+      <button class="calc-cat-btn" onclick="switchCalcCat('cardiac')">Cardiac<span class="cat-count">(5)</span></button>
+      <button class="calc-cat-btn" onclick="switchCalcCat('pulmonary')">Pulmonary<span class="cat-count">(2)</span></button>
+      <button class="calc-cat-btn" onclick="switchCalcCat('hepatic')">Hepatic<span class="cat-count">(2)</span></button>
+      <button class="calc-cat-btn" onclick="switchCalcCat('metabolic')">Metabolic<span class="cat-count">(2)</span></button>
+      <button class="calc-cat-btn" onclick="switchCalcCat('icu')">ICU<span class="cat-count">(3)</span></button>
+      <button class="calc-cat-btn" onclick="switchCalcCat('dosing')">Dosing<span class="cat-count">(1)</span></button>
+    </div>
+    <div class="calc-body">
+
+      <!-- ==================== GENERAL ==================== -->
+      <div class="calc-cat-section active" data-cat="general">
+        <div class="calc-cat-title">General</div>
+
+        <div class="calc-card" data-calc="bmi">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <h3>BMI</h3>
+            <button class="calc-clear-btn" onclick="clearCalc('bmi')" title="Clear">&#10005;</button>
+          </div>
+          <div class="calc-desc">Body Mass Index with WHO classification</div>
+          <div class="calc-row"><label>Weight (kg)</label><input type="number" id="bmi-wt" step="0.1" min="1" oninput="calcBMI()"></div>
+          <div class="calc-row"><label>Height (cm)</label><input type="number" id="bmi-ht" step="0.1" min="50" oninput="calcBMI()"></div>
+          <div class="calc-result" id="bmi-result">—</div>
+        </div>
+
+        <div class="calc-card" data-calc="gcs">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <h3>Glasgow Coma Scale</h3>
+            <button class="calc-clear-btn" onclick="clearCalc('gcs')" title="Clear">&#10005;</button>
+          </div>
+          <div class="calc-desc">Level of consciousness assessment</div>
+          <div class="calc-row"><label>Eye Opening</label><select id="gcs-eye" onchange="calcGCS()"><option value="4">Spontaneous (4)</option><option value="3">To voice (3)</option><option value="2">To pain (2)</option><option value="1">None (1)</option></select></div>
+          <div class="calc-row"><label>Verbal</label><select id="gcs-verbal" onchange="calcGCS()"><option value="5">Oriented (5)</option><option value="4">Confused (4)</option><option value="3">Inappropriate (3)</option><option value="2">Incomprehensible (2)</option><option value="1">None (1)</option></select></div>
+          <div class="calc-row"><label>Motor</label><select id="gcs-motor" onchange="calcGCS()"><option value="6">Obeys commands (6)</option><option value="5">Localizes pain (5)</option><option value="4">Withdraws (4)</option><option value="3">Abnormal flexion (3)</option><option value="2">Extension (2)</option><option value="1">None (1)</option></select></div>
+          <div class="calc-result" id="gcs-result">—</div>
+        </div>
+
+        <div class="calc-card" data-calc="map">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <h3>Mean Arterial Pressure</h3>
+            <button class="calc-clear-btn" onclick="clearCalc('map')" title="Clear">&#10005;</button>
+          </div>
+          <div class="calc-desc">MAP = DBP + ⅓(SBP − DBP)</div>
+          <div class="calc-row"><label>SBP (mmHg)</label><input type="number" id="map-sbp" step="1" oninput="calcMAP()"></div>
+          <div class="calc-row"><label>DBP (mmHg)</label><input type="number" id="map-dbp" step="1" oninput="calcMAP()"></div>
+          <div class="calc-result" id="map-result">—</div>
+        </div>
+      </div>
+
+      <!-- ==================== RENAL ==================== -->
+      <div class="calc-cat-section active" data-cat="renal">
+        <div class="calc-cat-title">Renal</div>
+
+        <div class="calc-card" data-calc="crcl">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <h3>CrCl (Cockcroft-Gault)</h3>
+            <button class="calc-clear-btn" onclick="clearCalc('crcl')" title="Clear">&#10005;</button>
+          </div>
+          <div class="calc-desc">Creatinine clearance for drug dosing</div>
+          <div class="calc-row"><label>Creatinine (mg/dL)</label><input type="number" id="crcl-cr" step="0.01" min="0" oninput="calcCrCl()"></div>
+          <div class="calc-row"><label>Age (years)</label><input type="number" id="crcl-age" min="18" max="120" oninput="calcCrCl()"></div>
+          <div class="calc-row"><label>Weight (kg)</label><input type="number" id="crcl-wt" step="0.1" min="20" oninput="calcCrCl()"></div>
+          <div class="calc-row"><label>Sex</label><select id="crcl-sex" onchange="calcCrCl()"><option value="M">Male</option><option value="F">Female</option></select></div>
+          <div class="calc-result" id="crcl-result">—</div>
+        </div>
+
+        <div class="calc-card" data-calc="egfr">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <h3>eGFR (CKD-EPI 2021)</h3>
+            <button class="calc-clear-btn" onclick="clearCalc('egfr')" title="Clear">&#10005;</button>
+          </div>
+          <div class="calc-desc">Estimated GFR — race-free equation</div>
+          <div class="calc-row"><label>Creatinine (mg/dL)</label><input type="number" id="egfr-cr" step="0.01" min="0" oninput="calcEGFR()"></div>
+          <div class="calc-row"><label>Age (years)</label><input type="number" id="egfr-age" min="18" max="120" oninput="calcEGFR()"></div>
+          <div class="calc-row"><label>Sex</label><select id="egfr-sex" onchange="calcEGFR()"><option value="M">Male</option><option value="F">Female</option></select></div>
+          <div class="calc-result" id="egfr-result">—</div>
+        </div>
+
+        <div class="calc-card" data-calc="fena">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <h3>FENa</h3>
+            <button class="calc-clear-btn" onclick="clearCalc('fena')" title="Clear">&#10005;</button>
+          </div>
+          <div class="calc-desc">Fractional excretion of sodium — prerenal vs intrinsic AKI</div>
+          <div class="calc-row"><label>Serum Na (mEq/L)</label><input type="number" id="fena-sna" step="1" oninput="calcFENa()"></div>
+          <div class="calc-row"><label>Serum Cr (mg/dL)</label><input type="number" id="fena-scr" step="0.01" oninput="calcFENa()"></div>
+          <div class="calc-row"><label>Urine Na (mEq/L)</label><input type="number" id="fena-una" step="1" oninput="calcFENa()"></div>
+          <div class="calc-row"><label>Urine Cr (mg/dL)</label><input type="number" id="fena-ucr" step="0.1" oninput="calcFENa()"></div>
+          <div class="calc-result" id="fena-result">—</div>
+        </div>
+
+        <div class="calc-card" data-calc="osm">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <h3>Serum Osmolality</h3>
+            <button class="calc-clear-btn" onclick="clearCalc('osm')" title="Clear">&#10005;</button>
+          </div>
+          <div class="calc-desc">Calculated osmolality &amp; osmolar gap</div>
+          <div class="calc-row"><label>Na (mEq/L)</label><input type="number" id="osm-na" step="1" oninput="calcOsm()"></div>
+          <div class="calc-row"><label>Glucose (mg/dL)</label><input type="number" id="osm-glu" step="1" oninput="calcOsm()"></div>
+          <div class="calc-row"><label>BUN (mg/dL)</label><input type="number" id="osm-bun" step="0.1" oninput="calcOsm()"></div>
+          <div class="calc-row"><label>Measured Osm (optional)</label><input type="number" id="osm-meas" step="1" oninput="calcOsm()"></div>
+          <div class="calc-result" id="osm-result">—</div>
+        </div>
+      </div>
+
+      <!-- ==================== CARDIAC ==================== -->
+      <div class="calc-cat-section active" data-cat="cardiac">
+        <div class="calc-cat-title">Cardiac</div>
+
+        <div class="calc-card" data-calc="chads">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <h3>CHA₂DS₂-VASc</h3>
+            <button class="calc-clear-btn" onclick="clearCalc('chads')" title="Clear">&#10005;</button>
+          </div>
+          <div class="calc-desc">Stroke risk in atrial fibrillation</div>
+          <div class="calc-row"><label>CHF</label><select id="chads-chf" onchange="calcCHADS()"><option value="0">No</option><option value="1">Yes (+1)</option></select></div>
+          <div class="calc-row"><label>Hypertension</label><select id="chads-htn" onchange="calcCHADS()"><option value="0">No</option><option value="1">Yes (+1)</option></select></div>
+          <div class="calc-row"><label>Age</label><select id="chads-age" onchange="calcCHADS()"><option value="0">&lt; 65</option><option value="1">65-74 (+1)</option><option value="2">≥ 75 (+2)</option></select></div>
+          <div class="calc-row"><label>Diabetes</label><select id="chads-dm" onchange="calcCHADS()"><option value="0">No</option><option value="1">Yes (+1)</option></select></div>
+          <div class="calc-row"><label>Stroke/TIA/TE</label><select id="chads-stroke" onchange="calcCHADS()"><option value="0">No</option><option value="2">Yes (+2)</option></select></div>
+          <div class="calc-row"><label>Vascular Dz</label><select id="chads-vasc" onchange="calcCHADS()"><option value="0">No</option><option value="1">Yes (+1)</option></select></div>
+          <div class="calc-row"><label>Sex</label><select id="chads-sex" onchange="calcCHADS()"><option value="0">Male</option><option value="1">Female (+1)</option></select></div>
+          <div class="calc-result" id="chads-result">—</div>
+        </div>
+
+        <div class="calc-card" data-calc="hasbled">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <h3>HAS-BLED</h3>
+            <button class="calc-clear-btn" onclick="clearCalc('hasbled')" title="Clear">&#10005;</button>
+          </div>
+          <div class="calc-desc">Bleeding risk on anticoagulation</div>
+          <div class="calc-row"><label>Hypertension (SBP&gt;160)</label><select id="hasbled-htn" onchange="calcHASBLED()"><option value="0">No</option><option value="1">Yes (+1)</option></select></div>
+          <div class="calc-row"><label>Renal disease</label><select id="hasbled-renal" onchange="calcHASBLED()"><option value="0">No</option><option value="1">Yes (+1)</option></select></div>
+          <div class="calc-row"><label>Liver disease</label><select id="hasbled-liver" onchange="calcHASBLED()"><option value="0">No</option><option value="1">Yes (+1)</option></select></div>
+          <div class="calc-row"><label>Stroke history</label><select id="hasbled-stroke" onchange="calcHASBLED()"><option value="0">No</option><option value="1">Yes (+1)</option></select></div>
+          <div class="calc-row"><label>Prior bleed/predisposition</label><select id="hasbled-bleed" onchange="calcHASBLED()"><option value="0">No</option><option value="1">Yes (+1)</option></select></div>
+          <div class="calc-row"><label>Labile INR</label><select id="hasbled-inr" onchange="calcHASBLED()"><option value="0">No</option><option value="1">Yes (+1)</option></select></div>
+          <div class="calc-row"><label>Age &gt; 65</label><select id="hasbled-age" onchange="calcHASBLED()"><option value="0">No</option><option value="1">Yes (+1)</option></select></div>
+          <div class="calc-row"><label>Drugs (antiplatelet/NSAID)</label><select id="hasbled-drugs" onchange="calcHASBLED()"><option value="0">No</option><option value="1">Yes (+1)</option></select></div>
+          <div class="calc-row"><label>Alcohol (≥8 drinks/wk)</label><select id="hasbled-etoh" onchange="calcHASBLED()"><option value="0">No</option><option value="1">Yes (+1)</option></select></div>
+          <div class="calc-result" id="hasbled-result">—</div>
+        </div>
+
+        <div class="calc-card" data-calc="qtc">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <h3>QTc</h3>
+            <button class="calc-clear-btn" onclick="clearCalc('qtc')" title="Clear">&#10005;</button>
+          </div>
+          <div class="calc-desc">Corrected QT interval (Bazett &amp; Fridericia)</div>
+          <div class="calc-row"><label>QT interval (ms)</label><input type="number" id="qtc-qt" step="1" oninput="calcQTc()"></div>
+          <div class="calc-row"><label>Heart rate (bpm)</label><input type="number" id="qtc-hr" step="1" oninput="calcQTc()"></div>
+          <div class="calc-result" id="qtc-result">—</div>
+        </div>
+
+        <div class="calc-card" data-calc="wells">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <h3>Wells Score (DVT)</h3>
+            <button class="calc-clear-btn" onclick="clearCalc('wells')" title="Clear">&#10005;</button>
+          </div>
+          <div class="calc-desc">Probability of deep vein thrombosis</div>
+          <div class="calc-row"><label>Active cancer</label><select id="wells-cancer" onchange="calcWells()"><option value="0">No</option><option value="1">Yes (+1)</option></select></div>
+          <div class="calc-row"><label>Paralysis/immob.</label><select id="wells-paral" onchange="calcWells()"><option value="0">No</option><option value="1">Yes (+1)</option></select></div>
+          <div class="calc-row"><label>Bedridden &gt;3d / Surg &lt;12w</label><select id="wells-bed" onchange="calcWells()"><option value="0">No</option><option value="1">Yes (+1)</option></select></div>
+          <div class="calc-row"><label>Tenderness along vein</label><select id="wells-tend" onchange="calcWells()"><option value="0">No</option><option value="1">Yes (+1)</option></select></div>
+          <div class="calc-row"><label>Entire leg swollen</label><select id="wells-swell" onchange="calcWells()"><option value="0">No</option><option value="1">Yes (+1)</option></select></div>
+          <div class="calc-row"><label>Calf &gt;3cm vs other</label><select id="wells-calf" onchange="calcWells()"><option value="0">No</option><option value="1">Yes (+1)</option></select></div>
+          <div class="calc-row"><label>Pitting edema</label><select id="wells-edema" onchange="calcWells()"><option value="0">No</option><option value="1">Yes (+1)</option></select></div>
+          <div class="calc-row"><label>Collateral veins</label><select id="wells-coll" onchange="calcWells()"><option value="0">No</option><option value="1">Yes (+1)</option></select></div>
+          <div class="calc-row"><label>Alt diagnosis likely</label><select id="wells-alt" onchange="calcWells()"><option value="0">No</option><option value="-2">Yes (−2)</option></select></div>
+          <div class="calc-result" id="wells-result">—</div>
+        </div>
+
+        <div class="calc-card" data-calc="wellspe">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <h3>Wells Score (PE)</h3>
+            <button class="calc-clear-btn" onclick="clearCalc('wellspe')" title="Clear">&#10005;</button>
+          </div>
+          <div class="calc-desc">Probability of pulmonary embolism (≤ 4 unlikely, &gt; 4 likely)</div>
+          <div class="calc-row"><label>Clinical signs/symptoms of DVT</label><select id="wellspe-dvt" onchange="calcWellsPE()"><option value="0">No</option><option value="3">Yes (+3)</option></select></div>
+          <div class="calc-row"><label>Alternative Dx less likely than PE</label><select id="wellspe-alt" onchange="calcWellsPE()"><option value="0">No</option><option value="3">Yes (+3)</option></select></div>
+          <div class="calc-row"><label>HR &gt; 100 bpm</label><select id="wellspe-hr" onchange="calcWellsPE()"><option value="0">No</option><option value="1.5">Yes (+1.5)</option></select></div>
+          <div class="calc-row"><label>Immobilization ≥ 3d or surgery within 4 weeks</label><select id="wellspe-immob" onchange="calcWellsPE()"><option value="0">No</option><option value="1.5">Yes (+1.5)</option></select></div>
+          <div class="calc-row"><label>Prior DVT/PE</label><select id="wellspe-prior" onchange="calcWellsPE()"><option value="0">No</option><option value="1.5">Yes (+1.5)</option></select></div>
+          <div class="calc-row"><label>Hemoptysis</label><select id="wellspe-hemo" onchange="calcWellsPE()"><option value="0">No</option><option value="1">Yes (+1)</option></select></div>
+          <div class="calc-row"><label>Malignancy (on treatment / last 6 mo)</label><select id="wellspe-malig" onchange="calcWellsPE()"><option value="0">No</option><option value="1">Yes (+1)</option></select></div>
+          <div class="calc-result" id="wellspe-result">—</div>
+        </div>
+      </div>
+
+      <!-- ==================== PULMONARY ==================== -->
+      <div class="calc-cat-section active" data-cat="pulmonary">
+        <div class="calc-cat-title">Pulmonary</div>
+
+        <div class="calc-card" data-calc="aa">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <h3>A-a Gradient</h3>
+            <button class="calc-clear-btn" onclick="clearCalc('aa')" title="Clear">&#10005;</button>
+          </div>
+          <div class="calc-desc">Alveolar-arterial oxygen gradient</div>
+          <div class="calc-row"><label>FiO₂ (%)</label><input type="number" id="aa-fio2" step="1" value="21" min="21" max="100" oninput="calcAaGrad()"></div>
+          <div class="calc-row"><label>PaO₂ (mmHg)</label><input type="number" id="aa-pao2" step="1" oninput="calcAaGrad()"></div>
+          <div class="calc-row"><label>PaCO₂ (mmHg)</label><input type="number" id="aa-paco2" step="1" oninput="calcAaGrad()"></div>
+          <div class="calc-row"><label>Age (years)</label><input type="number" id="aa-age" step="1" oninput="calcAaGrad()"></div>
+          <div class="calc-result" id="aa-result">—</div>
+        </div>
+
+        <div class="calc-card" data-calc="curb">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <h3>CURB-65</h3>
+            <button class="calc-clear-btn" onclick="clearCalc('curb')" title="Clear">&#10005;</button>
+          </div>
+          <div class="calc-desc">Pneumonia severity assessment</div>
+          <div class="calc-row"><label>Confusion</label><select id="curb-conf" onchange="calcCURB()"><option value="0">No</option><option value="1">Yes (+1)</option></select></div>
+          <div class="calc-row"><label>BUN &gt; 19 mg/dL</label><select id="curb-bun" onchange="calcCURB()"><option value="0">No</option><option value="1">Yes (+1)</option></select></div>
+          <div class="calc-row"><label>RR ≥ 30</label><select id="curb-rr" onchange="calcCURB()"><option value="0">No</option><option value="1">Yes (+1)</option></select></div>
+          <div class="calc-row"><label>BP: SBP&lt;90 or DBP≤60</label><select id="curb-bp" onchange="calcCURB()"><option value="0">No</option><option value="1">Yes (+1)</option></select></div>
+          <div class="calc-row"><label>Age ≥ 65</label><select id="curb-age" onchange="calcCURB()"><option value="0">No</option><option value="1">Yes (+1)</option></select></div>
+          <div class="calc-result" id="curb-result">—</div>
+        </div>
+      </div>
+
+      <!-- ==================== HEPATIC ==================== -->
+      <div class="calc-cat-section active" data-cat="hepatic">
+        <div class="calc-cat-title">Hepatic</div>
+
+        <div class="calc-card" data-calc="childpugh">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <h3>Child-Pugh Score</h3>
+            <button class="calc-clear-btn" onclick="clearCalc('childpugh')" title="Clear">&#10005;</button>
+          </div>
+          <div class="calc-desc">Cirrhosis severity classification</div>
+          <div class="calc-row"><label>Bilirubin (mg/dL)</label><select id="cp-bili" onchange="calcChildPugh()"><option value="1">&lt; 2</option><option value="2">2-3</option><option value="3">&gt; 3</option></select></div>
+          <div class="calc-row"><label>Albumin (g/dL)</label><select id="cp-alb" onchange="calcChildPugh()"><option value="1">&gt; 3.5</option><option value="2">2.8-3.5</option><option value="3">&lt; 2.8</option></select></div>
+          <div class="calc-row"><label>INR</label><select id="cp-inr" onchange="calcChildPugh()"><option value="1">&lt; 1.7</option><option value="2">1.7-2.3</option><option value="3">&gt; 2.3</option></select></div>
+          <div class="calc-row"><label>Ascites</label><select id="cp-ascites" onchange="calcChildPugh()"><option value="1">None</option><option value="2">Mild / controlled</option><option value="3">Moderate-severe</option></select></div>
+          <div class="calc-row"><label>Encephalopathy</label><select id="cp-enceph" onchange="calcChildPugh()"><option value="1">None</option><option value="2">Grade 1-2</option><option value="3">Grade 3-4</option></select></div>
+          <div class="calc-result" id="childpugh-result">—</div>
+        </div>
+
+        <div class="calc-card" data-calc="meld">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <h3>MELD-Na Score</h3>
+            <button class="calc-clear-btn" onclick="clearCalc('meld')" title="Clear">&#10005;</button>
+          </div>
+          <div class="calc-desc">Model for End-stage Liver Disease</div>
+          <div class="calc-row"><label>Bilirubin (mg/dL)</label><input type="number" id="meld-bili" step="0.1" min="0" oninput="calcMELD()"></div>
+          <div class="calc-row"><label>Creatinine (mg/dL)</label><input type="number" id="meld-cr" step="0.01" min="0" oninput="calcMELD()"></div>
+          <div class="calc-row"><label>INR</label><input type="number" id="meld-inr" step="0.01" min="0" oninput="calcMELD()"></div>
+          <div class="calc-row"><label>Na (mEq/L)</label><input type="number" id="meld-na" step="1" oninput="calcMELD()"></div>
+          <div class="calc-row"><label>On Dialysis</label><select id="meld-dialysis" onchange="calcMELD()"><option value="0">No</option><option value="1">Yes</option></select></div>
+          <div class="calc-result" id="meld-result">—</div>
+        </div>
+      </div>
+
+      <!-- ==================== METABOLIC ==================== -->
+      <div class="calc-cat-section active" data-cat="metabolic">
+        <div class="calc-cat-title">Metabolic</div>
+
+        <div class="calc-card" data-calc="ag">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <h3>Anion Gap</h3>
+            <button class="calc-clear-btn" onclick="clearCalc('ag')" title="Clear">&#10005;</button>
+          </div>
+          <div class="calc-desc">With albumin-corrected AG &amp; delta/delta</div>
+          <div class="calc-row"><label>Na (mEq/L)</label><input type="number" id="ag-na" step="1" oninput="calcAG()"></div>
+          <div class="calc-row"><label>Cl (mEq/L)</label><input type="number" id="ag-cl" step="1" oninput="calcAG()"></div>
+          <div class="calc-row"><label>HCO₃ (mEq/L)</label><input type="number" id="ag-hco3" step="1" oninput="calcAG()"></div>
+          <div class="calc-row"><label>Albumin (g/dL)</label><input type="number" id="ag-alb" step="0.1" value="4.0" oninput="calcAG()"></div>
+          <div class="calc-result" id="ag-result">—</div>
+        </div>
+
+        <div class="calc-card" data-calc="ca">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <h3>Corrected Calcium</h3>
+            <button class="calc-clear-btn" onclick="clearCalc('ca')" title="Clear">&#10005;</button>
+          </div>
+          <div class="calc-desc">Adjusted for albumin (Payne formula)</div>
+          <div class="calc-row"><label>Total Ca (mg/dL)</label><input type="number" id="ca-total" step="0.1" min="0" oninput="calcCorrCa()"></div>
+          <div class="calc-row"><label>Albumin (g/dL)</label><input type="number" id="ca-alb" step="0.1" min="0" oninput="calcCorrCa()"></div>
+          <div class="calc-result" id="ca-result">—</div>
+        </div>
+      </div>
+
+      <!-- ==================== ICU ==================== -->
+      <div class="calc-cat-section active" data-cat="icu">
+        <div class="calc-cat-title">ICU</div>
+
+        <div class="calc-card" data-calc="news2">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <h3>NEWS2</h3>
+            <button class="calc-clear-btn" onclick="clearCalc('news2')" title="Clear">&#10005;</button>
+          </div>
+          <div class="calc-desc">National Early Warning Score 2</div>
+          <div class="calc-row"><label>RR (breaths/min)</label><input type="number" id="news-rr" step="1" oninput="calcNEWS2()"></div>
+          <div class="calc-row"><label>SpO₂ (%)</label><input type="number" id="news-spo2" step="1" oninput="calcNEWS2()"></div>
+          <div class="calc-row"><label>On supplemental O₂</label><select id="news-o2" onchange="calcNEWS2()"><option value="0">No (room air)</option><option value="2">Yes (+2)</option></select></div>
+          <div class="calc-row"><label>Temperature (°C)</label><input type="number" id="news-temp" step="0.1" oninput="calcNEWS2()"></div>
+          <div class="calc-row"><label>SBP (mmHg)</label><input type="number" id="news-sbp" step="1" oninput="calcNEWS2()"></div>
+          <div class="calc-row"><label>Heart Rate (bpm)</label><input type="number" id="news-hr" step="1" oninput="calcNEWS2()"></div>
+          <div class="calc-row"><label>Consciousness</label><select id="news-avpu" onchange="calcNEWS2()"><option value="0">Alert</option><option value="3">Confusion/V/P/U</option></select></div>
+          <div class="calc-result" id="news2-result">—</div>
+        </div>
+
+        <div class="calc-card" data-calc="sofa">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <h3>SOFA Score</h3>
+            <button class="calc-clear-btn" onclick="clearCalc('sofa')" title="Clear">&#10005;</button>
+          </div>
+          <div class="calc-desc">Sequential Organ Failure Assessment</div>
+          <div class="calc-row"><label>PaO₂/FiO₂ ratio</label><select id="sofa-resp" onchange="calcSOFA()"><option value="0">≥ 400</option><option value="1">300-399</option><option value="2">200-299</option><option value="3">&lt;200 + vent</option><option value="4">&lt;100 + vent</option></select></div>
+          <div class="calc-row"><label>Platelets (×10³/μL)</label><select id="sofa-coag" onchange="calcSOFA()"><option value="0">≥ 150</option><option value="1">100-149</option><option value="2">50-99</option><option value="3">20-49</option><option value="4">&lt; 20</option></select></div>
+          <div class="calc-row"><label>Bilirubin (mg/dL)</label><select id="sofa-liver" onchange="calcSOFA()"><option value="0">&lt; 1.2</option><option value="1">1.2-1.9</option><option value="2">2.0-5.9</option><option value="3">6.0-11.9</option><option value="4">≥ 12</option></select></div>
+          <div class="calc-row"><label>MAP / Vasopressors</label><select id="sofa-cardio" onchange="calcSOFA()"><option value="0">MAP ≥ 70</option><option value="1">MAP &lt; 70</option><option value="2">Dopa ≤5 or dobutamine</option><option value="3">Dopa &gt;5 or epi/norepi ≤0.1</option><option value="4">Dopa &gt;15 or epi/norepi &gt;0.1</option></select></div>
+          <div class="calc-row"><label>GCS</label><select id="sofa-neuro" onchange="calcSOFA()"><option value="0">15</option><option value="1">13-14</option><option value="2">10-12</option><option value="3">6-9</option><option value="4">&lt; 6</option></select></div>
+          <div class="calc-row"><label>Creatinine (mg/dL) / UO</label><select id="sofa-renal" onchange="calcSOFA()"><option value="0">&lt; 1.2</option><option value="1">1.2-1.9</option><option value="2">2.0-3.4</option><option value="3">3.5-4.9 or UO &lt;500mL/d</option><option value="4">≥ 5.0 or UO &lt;200mL/d</option></select></div>
+          <div class="calc-result" id="sofa-result">—</div>
+        </div>
+
+        <div class="calc-card" data-calc="qsofa">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <h3>qSOFA</h3>
+            <button class="calc-clear-btn" onclick="clearCalc('qsofa')" title="Clear">&#10005;</button>
+          </div>
+          <div class="calc-desc">Quick SOFA — bedside sepsis screening (score ≥ 2 = high risk)</div>
+          <div class="calc-row"><label>RR ≥ 22 breaths/min</label><select id="qsofa-rr" onchange="calcQSOFA()"><option value="0">No</option><option value="1">Yes (+1)</option></select></div>
+          <div class="calc-row"><label>Altered mentation (GCS &lt; 15)</label><select id="qsofa-ment" onchange="calcQSOFA()"><option value="0">No</option><option value="1">Yes (+1)</option></select></div>
+          <div class="calc-row"><label>SBP ≤ 100 mmHg</label><select id="qsofa-sbp" onchange="calcQSOFA()"><option value="0">No</option><option value="1">Yes (+1)</option></select></div>
+          <div class="calc-result" id="qsofa-result">—</div>
+        </div>
+      </div>
+
+      <!-- ==================== DOSING ==================== -->
+      <div class="calc-cat-section active" data-cat="dosing">
+        <div class="calc-cat-title">Renal Drug Dosing</div>
+
+        <div class="calc-card" data-calc="dosing" style="grid-column: 1 / -1;">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <h3>Drug Dosing — Renal Adjustment</h3>
+            <button class="calc-clear-btn" onclick="clearDosingCalc()" title="Clear">&#10005;</button>
+          </div>
+          <div class="calc-desc">Dose recommendations adjusted for renal function. Verify with pharmacy for critical patients.</div>
+          <div class="calc-row">
+            <label>Drug</label>
+            <select id="dosing-drug" onchange="calcDosing()" style="font-family:var(--mono);font-size:0.65rem;padding:0.25rem 0.4rem;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--text);max-width:240px;">
+              <option value="">— Select drug —</option>
+              <optgroup label="Antibacterials — Beta-Lactams">
+                <option value="pipTazo">Piperacillin-Tazobactam</option>
+                <option value="meropenem">Meropenem</option>
+                <option value="cefepime">Cefepime</option>
+                <option value="ceftazidime">Ceftazidime</option>
+                <option value="cefazolin">Cefazolin</option>
+                <option value="ampSulbactam">Ampicillin-Sulbactam</option>
+              </optgroup>
+              <optgroup label="Antibacterials — Glycopeptides / Oxazolidinones">
+                <option value="vancomycin">Vancomycin</option>
+              </optgroup>
+              <optgroup label="Antibacterials — Aminoglycosides">
+                <option value="gentamicin">Gentamicin</option>
+                <option value="amikacin">Amikacin</option>
+              </optgroup>
+              <optgroup label="Antibacterials — Fluoroquinolones">
+                <option value="levofloxacin">Levofloxacin</option>
+                <option value="ciprofloxacin">Ciprofloxacin</option>
+              </optgroup>
+              <optgroup label="Antibacterials — Other">
+                <option value="tmpSmx">TMP-SMX (Bactrim)</option>
+                <option value="metronidazole">Metronidazole</option>
+                <option value="nitrofurantoin">Nitrofurantoin</option>
+              </optgroup>
+              <optgroup label="Antifungals">
+                <option value="fluconazole">Fluconazole</option>
+                <option value="micafungin">Micafungin</option>
+              </optgroup>
+              <optgroup label="Antivirals">
+                <option value="acyclovir">Acyclovir (IV)</option>
+                <option value="ganciclovir">Ganciclovir (IV)</option>
+              </optgroup>
+              <optgroup label="Other — Anticoagulants / Metabolic">
+                <option value="enoxaparin">Enoxaparin</option>
+                <option value="metformin">Metformin</option>
+              </optgroup>
+            </select>
+          </div>
+          <div class="calc-row"><label>Patient weight (kg)</label><input type="number" id="dosing-wt" step="0.5" min="20" max="200" oninput="calcDosing()" placeholder="e.g. 65"></div>
+          <div class="calc-row" style="align-items:center;gap:0.5rem;flex-wrap:wrap;">
+            <label>CrCl / eGFR (mL/min)</label>
+            <input type="number" id="dosing-crcl" step="1" min="0" max="200" oninput="calcDosing()" placeholder="e.g. 45" style="flex:1;min-width:80px;max-width:100px;">
+            <button class="btn-secondary" onclick="pullGFRIntoDosingCalc()" style="font-size:0.58rem;padding:0.2rem 0.5rem;" title="Use eGFR value already computed in the Renal section">&#8635; Use current eGFR</button>
+          </div>
+          <div class="calc-result" id="dosing-result">—</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
