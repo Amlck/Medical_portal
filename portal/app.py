@@ -29,7 +29,7 @@ from flask import Flask, render_template, request, jsonify, send_file, Response
 # ---------------------------------------------------------------------------
 PORTAL_DIR = Path(__file__).parent.resolve()
 MEDICAL_DIR = PORTAL_DIR.parent
-HANDOFF_DIR = MEDICAL_DIR / "Dr_claude" / "handoff-tool"
+HANDOFF_DIR = MEDICAL_DIR / "Handoff" / "handoff-tool"
 ADMISSIONS_DIR = MEDICAL_DIR / "Admissions" / "dist"
 UPLOAD_DIR = PORTAL_DIR / "uploads"
 UPLOAD_DIR.mkdir(exist_ok=True)

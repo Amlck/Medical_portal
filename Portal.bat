@@ -27,9 +27,9 @@ echo Installing portal dependencies...
 call %PYTHON_CMD% -m pip install -r portal\requirements.txt -q
 if errorlevel 1 goto :pip_failed
 
-if exist "Dr_claude\handoff-tool\requirements.txt" (
+if exist "Handoff\handoff-tool\requirements.txt" (
     echo Installing Handoff Tool dependencies...
-    call %PYTHON_CMD% -m pip install -r Dr_claude\handoff-tool\requirements.txt -q
+    call %PYTHON_CMD% -m pip install -r Handoff\handoff-tool\requirements.txt -q
     if errorlevel 1 goto :pip_failed
 )
 

@@ -18,8 +18,8 @@ done
 pip3 install -r portal/requirements.txt -q
 
 # Install Handoff Tool dependencies
-if [ -f "Dr_claude/handoff-tool/requirements.txt" ]; then
-  pip3 install -r Dr_claude/handoff-tool/requirements.txt -q
+if [ -f "Handoff/handoff-tool/requirements.txt" ]; then
+  pip3 install -r Handoff/handoff-tool/requirements.txt -q
 fi
 
 # Build Admissions SPA (Vite → dist/index.html)

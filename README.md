@@ -69,7 +69,7 @@ The handoff tool's note generation (SBAR, progress notes, discharge summaries) r
 Click the ⚙ Settings gear in the portal sidebar, paste your key, and save. Stored in your browser's localStorage only.
 
 **Option B: Environment file**
-Create `Dr_claude/handoff-tool/.env`:
+Create `Handoff/handoff-tool/.env`:
 ```
 OPENROUTER_API_KEY=sk-or-v1-your-key-here
 ```
@@ -122,7 +122,7 @@ portal/templates/
       ├── settings_modal.html
       └── views/               # One file per view (handoff, admissions, calculator, census, phi, …)
 
-Dr_claude/handoff-tool/        # Handoff backend (port 5050) + frontend
+Handoff/handoff-tool/          # Handoff backend (port 5050) + frontend
 phi_remover.py                 # PHI de-identification module
 Admissions/dist/               # Admissions SPA (pre-built static)
 ```
@@ -133,7 +133,7 @@ All sub-services are proxied through the portal at a single origin so iframes wo
 
 ## Privacy
 
-Patient data never leaves your machine. The only external network call is the OpenRouter API for AI note generation, and only after PHI is scrubbed. All patient records are stored as local files in `Dr_claude/handoff-tool/patients/` (gitignored).
+Patient data never leaves your machine. The only external network call is the OpenRouter API for AI note generation, and only after PHI is scrubbed. All patient records are stored as local files in `Handoff/handoff-tool/patients/` (gitignored).
 
 ---
 
