@@ -2,7 +2,7 @@
 
 - **Age/Sex:**
 - **MRN:**
-- **Admitted:** YYYY-MM-DD
+- **Admitted:**
 - **Admitting Dx:**
 - **PMH:**
 - **Allergies:**

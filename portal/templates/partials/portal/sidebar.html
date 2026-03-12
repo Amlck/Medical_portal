@@ -34,10 +34,10 @@
       <span class="nav-label">Census Board</span>
       <span class="status-dot alive" id="dot-census"></span>
     </button>
-    <button class="nav-item" onclick="switchView('casemaker')" data-view="casemaker" title="Casemaker (CLI only) (Alt+8)">
-      <span class="nav-icon">&#128202;</span>
-      <span class="nav-label">Casemaker</span>
-      <span class="status-dot" id="dot-casemaker" style="background:var(--warn)"></span>
+    <button class="nav-item" onclick="openPatientContextWorkspace()" data-view="patient-context" title="Patient Context Workspace (Alt+9)">
+      <span class="nav-icon">&#128200;</span>
+      <span class="nav-label">Patient Context</span>
+      <span class="nav-badge" id="patient-context-nav-badge" style="display:none;">0</span>
     </button>
   </div>
 
@@ -71,15 +71,30 @@
   </div>
 
   <div class="sidebar-footer">
-    <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()" title="Toggle light/dark theme">
-      <span id="theme-icon">&#9788;</span>
-      <span class="theme-label" id="theme-label">Light</span>
-    </button>
-    <button class="settings-toggle" id="settings-toggle" onclick="openSettings()" title="Settings">
-      <span>&#9881;</span>
-      <span class="settings-label">Settings</span>
-    </button><br>
-    Medical Portal v1.0<br>
-    {{ portal_config.footer_note }}
+    <div class="sidebar-patient-picker">
+      <label class="sidebar-patient-label" for="sidebar-patient-select">Patient</label>
+      <div class="sidebar-patient-row">
+        <select id="sidebar-patient-select" onchange="handleSidebarPatientSelect(this.value)">
+          <option value="">Select patient</option>
+        </select>
+        <button class="sidebar-patient-open-btn" onclick="openSidebarSelectedPatient()" title="Open in workspace">↗</button>
+        <button class="sidebar-patient-open-btn" id="patient-context-toggle" onclick="togglePatientContextDrawer()" title="Quick patient context">
+          <span aria-hidden="true">&#128065;</span>
+          <span class="sidebar-patient-open-badge" id="patient-context-toggle-badge" style="display:none;">0</span>
+        </button>
+      </div>
+      <div class="sidebar-patient-meta" id="sidebar-patient-meta">No patient selected.</div>
+    </div>
+    <div class="sidebar-footer-controls">
+      <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()" title="Toggle light/dark theme">
+        <span id="theme-icon">&#9788;</span>
+        <span class="theme-label" id="theme-label">Light</span>
+      </button>
+      <button class="settings-toggle" id="settings-toggle" onclick="openSettings()" title="Settings">
+        <span>&#9881;</span>
+        <span class="settings-label">Settings</span>
+      </button>
+    </div>
+    Medical Portal v1.0 &middot; {{ portal_config.footer_note }}
   </div>
 </div>

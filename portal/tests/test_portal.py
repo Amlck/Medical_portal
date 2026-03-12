@@ -36,14 +36,19 @@ class PortalAppTests(unittest.TestCase):
             'id="view-phi"',
             'id="view-calculator"',
             'id="view-census"',
+            'id="view-patient-context"',
+            'id="patient-context-panel"',
+            'id="shortcut-help-overlay"',
             '/static/js/portal-shell.js?v=',
             '/static/js/portal-phi.js?v=',
             '/static/js/portal-calculators.js?v=',
+            '/static/js/portal-patient-context.js?v=',
             '/static/js/portal-music.js?v=',
             '/static/js/portal-nav.js?v=',
         ):
             self.assertIn(anchor, html)
         for removed in (
+            'id="view-casemaker"',
             'id="view-abx"',
             'id="view-drugs"',
             'id="drug-panel"',
@@ -69,6 +74,7 @@ class PortalAppTests(unittest.TestCase):
             "/static/js/portal-shell.js",
             "/static/js/portal-phi.js",
             "/static/js/portal-calculators.js",
+            "/static/js/portal-patient-context.js",
             "/static/js/portal-music.js",
             "/static/js/portal-nav.js",
         ):

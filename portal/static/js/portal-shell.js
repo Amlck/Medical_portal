@@ -39,6 +39,12 @@ window.addEventListener('message', (e) => {
 
 applyTheme(getStoredTheme());
 
+(function cleanupLegacyApiKeyStorage() {
+  try {
+    localStorage.removeItem('openrouterApiKey');
+  } catch (err) {}
+})();
+
 // ---------------------------------------------------------------------------
 // Settings — API Key management
 // ---------------------------------------------------------------------------
@@ -60,6 +66,22 @@ function closeSettings() {
   document.getElementById('settings-overlay').classList.remove('active');
 }
 
+function openShortcutHelp() {
+  const overlay = document.getElementById('shortcut-help-overlay');
+  if (overlay) overlay.classList.add('active');
+}
+
+function closeShortcutHelp() {
+  const overlay = document.getElementById('shortcut-help-overlay');
+  if (overlay) overlay.classList.remove('active');
+}
+
+function isTypingTarget(target) {
+  if (!target) return false;
+  const tag = (target.tagName || '').toUpperCase();
+  return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || !!target.isContentEditable;
+}
+
 function toggleKeyVisibility() {
   const input = document.getElementById('settings-api-key');
   const btn = document.getElementById('settings-eye-btn');
@@ -77,12 +99,10 @@ function saveApiKey() {
   const st = document.getElementById('settings-status');
   if (key) {
     localStorage.setItem(API_KEY_STORAGE, key);
-    localStorage.setItem('openrouterApiKey', key);
     st.textContent = 'API key saved to this browser.';
     st.className = 'settings-status success';
   } else {
     localStorage.removeItem(API_KEY_STORAGE);
-    localStorage.removeItem('openrouterApiKey');
     st.textContent = 'API key removed.';
     st.className = 'settings-status info';
   }
@@ -92,7 +112,6 @@ function saveApiKey() {
 
 function clearApiKey() {
   localStorage.removeItem(API_KEY_STORAGE);
-  localStorage.removeItem('openrouterApiKey');
   document.getElementById('settings-api-key').value = '';
   const st = document.getElementById('settings-status');
   st.textContent = 'API key removed from this browser.';
@@ -171,15 +190,13 @@ function broadcastApiKeyStatus() {
 }
 
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') closeSettings();
+  if (e.key === 'Escape') {
+    closeShortcutHelp();
+    closeSettings();
+  }
 });
 
 setTimeout(checkAiStatus, 2000);
-
-(function syncAdmissionsKey() {
-  const k = localStorage.getItem(API_KEY_STORAGE);
-  if (k) localStorage.setItem('openrouterApiKey', k);
-})();
 
 // ---------------------------------------------------------------------------
 // Sidebar toggle
@@ -192,8 +209,10 @@ function toggleSidebar() {
 // View switching
 // ---------------------------------------------------------------------------
 let currentView = 'handoff';
+let lastNonPatientContextView = 'handoff';
 
 function switchView(name) {
+  if (name !== 'patient-context') lastNonPatientContextView = name;
   currentView = name;
   document.querySelectorAll('.nav-item').forEach((btn) => {
     btn.classList.toggle('active', btn.dataset.view === name);
@@ -201,6 +220,13 @@ function switchView(name) {
   document.querySelectorAll('.view').forEach((view) => {
     view.classList.toggle('active', view.id === `view-${name}`);
   });
+  if (name === 'patient-context' && typeof renderPatientContextWorkspace === 'function') {
+    renderPatientContextWorkspace();
+  }
+}
+
+function getPatientContextBackView() {
+  return lastNonPatientContextView || 'handoff';
 }
 
 // ---------------------------------------------------------------------------
@@ -278,6 +304,26 @@ window.addEventListener('message', (e) => {
     if (iframe && iframe.src) {
       iframe.contentWindow.location.reload();
     }
+    if (typeof loadSidebarPatientList === 'function') {
+      loadSidebarPatientList();
+    }
+    if (typeof invalidatePatientContextCache === 'function') {
+      invalidatePatientContextCache(e.data.patientId || '');
+    }
+    if (e.data.patientId && typeof openPatientContextById === 'function') {
+      openPatientContextById(e.data.patientId).catch(() => {});
+    }
+  }
+
+  if (e.data.type === 'handoff-patient-selected' || e.data.type === 'handoff-patient-created') {
+    if (e.data.patientId && typeof openPatientContextById === 'function') {
+      openPatientContextById(e.data.patientId).catch(() => {});
+    } else if (!e.data.patientId && typeof clearActivePatientContext === 'function') {
+      clearActivePatientContext();
+    }
+    if (typeof loadSidebarPatientList === 'function') {
+      loadSidebarPatientList();
+    }
   }
 
   if (e.data.type === 'open-print-chart' && e.data.html) {
@@ -292,10 +338,10 @@ window.addEventListener('message', (e) => {
 });
 
 // ---------------------------------------------------------------------------
-// Keyboard shortcuts: Alt+1–5 and Alt+8 to switch views
+// Keyboard shortcuts: Alt+1–5, Alt+9, Alt+0
 // ---------------------------------------------------------------------------
 document.addEventListener('keydown', (e) => {
-  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+  if (isTypingTarget(e.target)) return;
   if (e.altKey) {
     switch (e.key) {
       case '1': e.preventDefault(); switchView('handoff'); break;
@@ -303,8 +349,14 @@ document.addEventListener('keydown', (e) => {
       case '3': e.preventDefault(); switchView('phi'); break;
       case '4': e.preventDefault(); switchView('calculator'); break;
       case '5': e.preventDefault(); switchView('census'); break;
-      case '8': e.preventDefault(); switchView('casemaker'); break;
+      case '9': e.preventDefault(); if (typeof openPatientContextWorkspace === 'function') openPatientContextWorkspace(); break;
+      case '0': e.preventDefault(); openShortcutHelp(); break;
     }
+  }
+  if (!e.altKey && !e.ctrlKey && !e.metaKey && e.key === '?') {
+    e.preventDefault();
+    openShortcutHelp();
+    return;
   }
   if ((e.ctrlKey || e.metaKey) && e.key === '[') {
     e.preventDefault();

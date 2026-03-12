@@ -12,7 +12,6 @@ import datetime
 from pathlib import Path
 import requests as http_requests
 from flask import Flask, render_template, request, jsonify
-from dotenv import load_dotenv
 from prompts import PROMPTS
 
 # Import PHI Remover for scrubbing patient data before LLM calls
@@ -25,16 +24,12 @@ except ImportError:
     PHI_SCRUB_AVAILABLE = False
     print("  [WARNING] phi_remover not found — PHI scrubbing disabled")
 
-# Load .env file from the same directory as app.py
-load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
-
 app = Flask(__name__)
 app.config['TEMPLATES_AUTO_RELOAD'] = True  # Always pick up template changes
 
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
-OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "")
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 MODEL = "anthropic/claude-sonnet-4.5"
 MAX_TOKENS = 4096
@@ -66,11 +61,32 @@ def parse_patient_header(content):
 
     admit_match = re.search(r"\*\*Admitted:\*\*\s*(.+)$", content, re.MULTILINE)
     admitted = admit_match.group(1).strip() if admit_match else ""
+    admitted = re.sub(r"\s*YYYY-MM-DD\s*$", "", admitted).strip()
 
     dx_match = re.search(r"\*\*Admitting Dx:\*\*\s*(.+)$", content, re.MULTILINE)
     dx = dx_match.group(1).strip() if dx_match else ""
 
     return {"name": name, "admitted": admitted, "dx": dx}
+
+
+def get_patient_filepath(pid):
+    return os.path.join(PATIENTS_DIR, f"{pid}.md")
+
+
+def load_patient_record(pid):
+    filepath = get_patient_filepath(pid)
+    if not os.path.exists(filepath):
+        return None, None, None
+    content = Path(filepath).read_text(encoding="utf-8")
+    return filepath, content, parse_patient_header(content)
+
+
+def format_http_error(error):
+    try:
+        error_body = error.response.json() if error.response else {}
+    except Exception:
+        error_body = {}
+    return error_body.get("error", {}).get("message", str(error))
 
 
 def scrub_phi_for_llm(text):
@@ -90,8 +106,8 @@ def scrub_phi_for_llm(text):
 
 
 def get_api_key():
-    """Get API key: prefer per-request header, fall back to server .env."""
-    return request.headers.get("X-API-Key", "").strip() or OPENROUTER_API_KEY
+    """Get API key from the current request only."""
+    return request.headers.get("X-API-Key", "").strip()
 
 
 def call_llm(system_prompt, user_message, api_key=None):
@@ -127,12 +143,11 @@ def call_llm(system_prompt, user_message, api_key=None):
 # ---------------------------------------------------------------------------
 @app.route("/api/ai-status", methods=["GET"])
 def ai_status():
-    """Report whether an API key is available (server-side or per-request)."""
-    has_server_key = bool(OPENROUTER_API_KEY)
+    """Report whether a per-request browser API key is available."""
     has_header_key = bool(request.headers.get("X-API-Key", "").strip())
     return jsonify({
-        "ai_available": has_server_key or has_header_key,
-        "source": "header" if has_header_key else ("server" if has_server_key else "none"),
+        "ai_available": has_header_key,
+        "source": "header" if has_header_key else "none",
     })
 
 
@@ -174,7 +189,7 @@ def create_patient():
         return jsonify({"error": "Patient name is required."}), 400
 
     # Build filename: sanitized name + admit date
-    admit_date = data.get("admitted", datetime.date.today().isoformat())
+    admit_date = (data.get("admitted", "") or datetime.date.today().isoformat()).strip()
     safe_name = re.sub(r"[^\w\u4e00-\u9fff]", "_", name).strip("_").lower()
     filename = f"{safe_name}_{admit_date.replace('-', '')}.md"
     filepath = os.path.join(PATIENTS_DIR, filename)
@@ -186,20 +201,25 @@ def create_patient():
     template = Path(TEMPLATE_PATH).read_text(encoding="utf-8")
     content = template.replace("[Name]", name)
 
-    # Fill in provided fields
-    for field, key in [
-        ("Age/Sex", "age_sex"),
-        ("MRN", "mrn"),
-        ("Admitted", "admitted"),
-        ("Admitting Dx", "dx"),
-        ("PMH", "pmh"),
-        ("Allergies", "allergies"),
-        ("Code Status", "code_status"),
-        ("Primary Team", "team"),
-    ]:
-        val = data.get(key, "").strip()
-        if val:
-            content = content.replace(f"**{field}:**", f"**{field}:** {val}")
+    header_values = {
+        "Age/Sex": data.get("age_sex", "").strip(),
+        "MRN": data.get("mrn", "").strip(),
+        "Admitted": admit_date,
+        "Admitting Dx": data.get("dx", "").strip(),
+        "PMH": data.get("pmh", "").strip(),
+        "Allergies": data.get("allergies", "").strip(),
+        "Code Status": data.get("code_status", "").strip(),
+        "Primary Team": data.get("team", "").strip(),
+    }
+    for field, val in header_values.items():
+        if not val:
+            continue
+        content = re.sub(
+            rf"(^- \*\*{re.escape(field)}:\*\*).*$",
+            rf"\1 {val}",
+            content,
+            flags=re.MULTILINE,
+        )
 
     with open(filepath, "w", encoding="utf-8") as f:
         f.write(content)
@@ -210,18 +230,34 @@ def create_patient():
 @app.route("/api/patients/<pid>", methods=["GET"])
 def get_patient(pid):
     """Get full patient record."""
-    filepath = os.path.join(PATIENTS_DIR, f"{pid}.md")
+    _, content, info = load_patient_record(pid)
+    if content is None:
+        return jsonify({"error": "Patient not found."}), 404
+    return jsonify({"id": pid, "content": content, **info})
+
+
+@app.route("/api/patients/<pid>", methods=["PUT"])
+def update_patient(pid):
+    """Overwrite a patient's full record with new content."""
+    filepath = get_patient_filepath(pid)
     if not os.path.exists(filepath):
         return jsonify({"error": "Patient not found."}), 404
-    content = Path(filepath).read_text(encoding="utf-8")
-    info = parse_patient_header(content)
-    return jsonify({"id": pid, "content": content, **info})
+
+    data = request.get_json(silent=True) or {}
+    content = data.get("content", None)
+    if content is None:
+        return jsonify({"error": "Missing 'content' field."}), 400
+
+    with open(filepath, "w", encoding="utf-8") as f:
+        f.write(content)
+
+    return jsonify({"status": "saved", "id": pid})
 
 
 @app.route("/api/patients/<pid>/append", methods=["POST"])
 def append_to_patient(pid):
     """Append new clinical data to a patient's record."""
-    filepath = os.path.join(PATIENTS_DIR, f"{pid}.md")
+    filepath = get_patient_filepath(pid)
     if not os.path.exists(filepath):
         return jsonify({"error": "Patient not found."}), 404
 
@@ -243,7 +279,7 @@ def append_to_patient(pid):
 @app.route("/api/patients/<pid>/discharge", methods=["POST"])
 def discharge_patient(pid):
     """Mark a patient as discharged by renaming the file with a _dc suffix."""
-    filepath = os.path.join(PATIENTS_DIR, f"{pid}.md")
+    filepath = get_patient_filepath(pid)
     if not os.path.exists(filepath):
         return jsonify({"error": "Patient not found."}), 404
 
@@ -255,7 +291,7 @@ def discharge_patient(pid):
 @app.route("/api/patients/<pid>", methods=["DELETE"])
 def delete_patient(pid):
     """Permanently delete a patient file."""
-    filepath = os.path.join(PATIENTS_DIR, f"{pid}.md")
+    filepath = get_patient_filepath(pid)
     if not os.path.exists(filepath):
         return jsonify({"error": "Patient not found."}), 404
 
@@ -274,13 +310,11 @@ def generate():
     note_type = data.get("type", "sbar")
 
     if note_type not in PROMPTS:
-        return jsonify({"error": f"Unknown note type: {note_type}. Use: sbar, progress, discharge"}), 400
+        return jsonify({"error": f"Unknown note type: {note_type}. Use: sbar, progress, discharge, discharge_ntuh"}), 400
 
-    filepath = os.path.join(PATIENTS_DIR, f"{pid}.md")
-    if not os.path.exists(filepath):
+    _, patient_record, _ = load_patient_record(pid)
+    if patient_record is None:
         return jsonify({"error": "Patient not found."}), 404
-
-    patient_record = Path(filepath).read_text(encoding="utf-8")
     today = datetime.date.today().isoformat()
 
     try:
@@ -292,9 +326,7 @@ def generate():
         result_text = call_llm(system_prompt, user_message)
         return jsonify({"note": result_text, "type": note_type, "phi_scrubbed": sum(phi_counts.values())})
     except http_requests.exceptions.HTTPError as e:
-        error_body = e.response.json() if e.response else {}
-        msg = error_body.get("error", {}).get("message", str(e))
-        return jsonify({"error": f"OpenRouter API error: {msg}"}), 500
+        return jsonify({"error": f"OpenRouter API error: {format_http_error(e)}"}), 500
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 

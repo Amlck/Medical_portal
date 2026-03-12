@@ -649,130 +649,14 @@ async function copyAllResults(btn) {
 // Lab Trends Panel
 // ---------------------------------------------------------------------------
 
-let labTrendsVisible = false;
-
 function toggleLabTrends() {
-  labTrendsVisible = !labTrendsVisible;
-  const panel = document.getElementById('lab-trends-panel');
-  const btn = document.getElementById('lab-trends-toggle-btn');
-  panel.style.display = labTrendsVisible ? 'block' : 'none';
-  btn.style.opacity = labTrendsVisible ? '1' : '';
-  btn.style.background = labTrendsVisible ? 'var(--accent-muted, rgba(99,102,241,0.12))' : '';
-}
-
-// Parse all timestamped lab entries from a patient record string.
-// Returns array of { timestamp, date, labs } sorted oldest→newest.
-function parseLabTimeline(record) {
-  // Split on ## YYYY-MM-DD HH:MM — Category headings
-  const sectionRe = /^##\s*(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2})/m;
-  const parts = record.split(/(?=^## \d{4}-\d{2}-\d{2})/m);
-  const timeline = [];
-
-  for (const part of parts) {
-    const tsMatch = part.match(/^##\s*(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2})/m);
-    if (!tsMatch) continue;
-    const timestamp = `${tsMatch[1]} ${tsMatch[2]}`;
-    const labs = {};
-
-    // Parse markdown table rows  | Test | Value |
-    const tableRowRe = /^\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|/gm;
-    let m;
-    while ((m = tableRowRe.exec(part)) !== null) {
-      const name = m[1].trim();
-      const val = m[2].trim();
-      if (name === 'Test' || name.startsWith('-')) continue;
-      const numM = val.match(/^[<>]?\s*([\d.]+)/);
-      if (!numM) continue;
-      const v = parseFloat(numM[1]);
-      const nl = name.toLowerCase();
-      if (/creatinine|^cre$/i.test(name)) labs.Cr = v;
-      else if (/^na$/i.test(name) || /sodium/i.test(name)) labs.Na = v;
-      else if (/^k$/i.test(name) || /potassium/i.test(name)) labs.K = v;
-      else if (/^cl$/i.test(name) || /chloride/i.test(name)) labs.Cl = v;
-      else if (/hco3|^co2$|^tco2$/i.test(name)) labs.HCO3 = v;
-      else if (/^bun/i.test(name) || /urea.*n/i.test(name)) labs.BUN = v;
-      else if (/albumin|^alb$/i.test(name)) labs.Alb = v;
-      else if (/bilirubin|t-bil|t\.bil/i.test(name)) labs.TBili = v;
-      else if (/^inr$/i.test(name)) labs.INR = v;
-      else if (/calcium|^ca$/i.test(name)) labs.Ca = v;
-      else if (/glucose|^glu$/i.test(name)) labs.Glu = v;
-      else if (/platelet|^plt$/i.test(name)) labs.Plt = v;
-      else if (/hemoglobin|^hb$|^hgb$/i.test(name)) labs.Hgb = v;
-      else if (/wbc|white.*blood|leukocyte/i.test(name)) labs.WBC = v;
-    }
-
-    // Regex fallback for free-text vitals/labs in same section
-    if (!labs.Cr) { const x = part.match(/(?:Cr(?:eatinine)?|SCr)\s*[:=]?\s*([\d.]+)/i); if (x) labs.Cr = parseFloat(x[1]); }
-    if (!labs.Na) { const x = part.match(/(?:\bNa\b|Sodium)\s*[:=]?\s*(\d+)/i); if (x) labs.Na = parseFloat(x[1]); }
-    if (!labs.K)  { const x = part.match(/(?:\bK\b|Potassium)\s*[:=]?\s*([\d.]+)/i); if (x) labs.K = parseFloat(x[1]); }
-    if (!labs.Hgb){ const x = part.match(/(?:Hgb|Hb|Hemoglobin)\s*[:=]?\s*([\d.]+)/i); if (x) labs.Hgb = parseFloat(x[1]); }
-    if (!labs.WBC){ const x = part.match(/(?:WBC|Leukocyte)\s*[:=]?\s*([\d.]+)/i); if (x) labs.WBC = parseFloat(x[1]); }
-    if (!labs.Plt){ const x = part.match(/(?:Plt|Platelet)\s*[:=]?\s*([\d.]+)/i); if (x) labs.Plt = parseFloat(x[1]); }
-
-    if (Object.keys(labs).length > 0) {
-      timeline.push({ timestamp, labs });
-    }
-  }
-  return timeline.sort((a, b) => a.timestamp.localeCompare(b.timestamp));
-}
-
-// Render the lab trend table in the panel
-function renderLabTrends(timeline, patientName) {
-  const panel = document.getElementById('lab-trends-content');
-  if (timeline.length === 0) {
-    panel.innerHTML = '<span style="color:var(--text-dim);">No timestamped lab data found in record.</span>';
+  const sel = document.getElementById('calc-patient-select');
+  const pid = sel ? sel.value : '';
+  if (pid && (!activePatientId || activePatientId !== pid)) {
+    openPatientContextById(pid, { view: true }).catch(() => openPatientContextWorkspace());
     return;
   }
-
-  // Collect all lab keys present across all timepoints
-  const allKeys = [];
-  for (const entry of timeline) {
-    for (const k of Object.keys(entry.labs)) {
-      if (!allKeys.includes(k)) allKeys.push(k);
-    }
-  }
-
-  const trendArrow = (curr, prev) => {
-    if (prev === undefined) return '<span style="color:var(--text-dim)">—</span>';
-    const diff = curr - prev;
-    const pct = Math.abs(diff / prev) * 100;
-    if (pct < 3) return '<span style="color:var(--text-dim)">→</span>';
-    return diff > 0
-      ? `<span style="color:var(--red)">↑</span>`
-      : `<span style="color:var(--green)">↓</span>`;
-  };
-
-  // Build HTML table — rows = lab tests, columns = timepoints (max 6 most recent)
-  const shown = timeline.slice(-6);
-  let html = `<div style="font-size:0.6rem;color:var(--text-dim);margin-bottom:0.4rem;">`;
-  html += `${patientName} — ${timeline.length} lab set${timeline.length > 1 ? 's' : ''} found`;
-  if (timeline.length > 6) html += ` (showing last 6)`;
-  html += `</div>`;
-
-  html += `<div style="overflow-x:auto;"><table style="border-collapse:collapse;width:100%;font-size:0.61rem;">`;
-  html += `<thead><tr><th style="text-align:left;padding:2px 6px;border-bottom:1px solid var(--border);white-space:nowrap;">Test</th>`;
-  for (const entry of shown) {
-    html += `<th style="text-align:right;padding:2px 6px;border-bottom:1px solid var(--border);white-space:nowrap;">${entry.timestamp.replace('T',' ')}</th>`;
-  }
-  html += `</tr></thead><tbody>`;
-
-  for (const key of allKeys) {
-    const vals = shown.map(e => e.labs[key]);
-    if (vals.every(v => v === undefined)) continue;
-    html += `<tr>`;
-    html += `<td style="padding:2px 6px;color:var(--text-dim);white-space:nowrap;">${key}</td>`;
-    for (let i = 0; i < shown.length; i++) {
-      const v = shown[i].labs[key];
-      const prev = i > 0 ? shown[i-1].labs[key] : undefined;
-      const arrow = v !== undefined && prev !== undefined ? trendArrow(v, prev) : '<span style="color:var(--text-dim)">—</span>';
-      const display = v !== undefined ? `${v} ${arrow}` : '<span style="color:var(--text-dim)">—</span>';
-      html += `<td style="text-align:right;padding:2px 6px;">${display}</td>`;
-    }
-    html += `</tr>`;
-  }
-
-  html += `</tbody></table></div>`;
-  panel.innerHTML = html;
+  openPatientContextWorkspace();
 }
 
 // On load: inject copy buttons into every calc-card header (next to clear button)
@@ -1085,6 +969,7 @@ async function loadCalcPatientList() {
       opt.textContent = `${p.name} (${p.dx || 'no dx'})`;
       sel.appendChild(opt);
     });
+    if (activePatientId) sel.value = activePatientId;
   } catch(e) { /* Handoff offline, leave selector empty */ }
 }
 
@@ -1277,17 +1162,8 @@ async function loadPatientIntoCalc(pid) {
     // Trigger all recalculations
     calcEGFR(); calcCrCl(); calcCorrCa(); calcAG(); calcAaGrad(); calcMELD(); calcCHADS(); calcCURB(); calcWells(); calcWellsPE(); calcBMI(); calcMAP(); calcGCS(); calcFENa(); calcOsm(); calcQTc(); calcChildPugh(); calcHASBLED(); calcNEWS2(); calcSOFA(); calcQSOFA();
 
-    // Update lab trends panel if visible or auto-open if data found
-    const labTimeline = parseLabTimeline(record);
-    if (labTimeline.length > 0) {
-      renderLabTrends(labTimeline, data.name);
-      // Auto-show panel if more than one lab set (trends are meaningful)
-      if (labTimeline.length > 1 && !labTrendsVisible) {
-        toggleLabTrends();
-      }
-    } else {
-      document.getElementById('lab-trends-content').innerHTML =
-        '<span style="color:var(--text-dim);">No timestamped lab entries found in this record.</span>';
+    if (typeof setActivePatientContext === 'function') {
+      setActivePatientContext(data);
     }
 
     statusEl.style.color = 'var(--green)';
@@ -1323,29 +1199,40 @@ async function loadCensus() {
       return;
     }
 
-    let html = '<table class="census-table"><thead><tr><th>Patient</th><th>Diagnosis</th><th>Admitted</th><th>Status</th><th>Last Updated</th></tr></thead><tbody>';
+    let html = '<table class="census-table"><thead><tr><th>Patient</th><th>Diagnosis</th><th>Admitted</th><th>Status</th><th>Last Updated</th><th>Actions</th></tr></thead><tbody>';
 
     // Active patients first
     for (const p of active) {
       const mod = p.modified ? new Date(p.modified).toLocaleDateString() + ' ' + new Date(p.modified).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) : '—';
-      html += `<tr>
+      html += `<tr class="census-clickable-row" tabindex="0" role="button" onclick="openPatientContextById('${escHtml(p.id)}', { view: true })" onkeydown="if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openPatientContextById('${escHtml(p.id)}', { view: true }); }">
         <td class="census-name">${escHtml(p.name)}</td>
         <td class="census-dx" title="${escHtml(p.dx)}">${escHtml(p.dx || '—')}</td>
         <td>${escHtml(p.admitted || '—')}</td>
         <td><span class="census-tag active">Active</span></td>
         <td style="font-size:0.6rem;color:var(--text-dim);">${mod}</td>
+        <td>
+          <div class="census-row-actions">
+            <button class="census-inline-btn" onclick="event.stopPropagation(); openPatientContextById('${escHtml(p.id)}', { view: true })">Context</button>
+            <button class="census-inline-btn" onclick="event.stopPropagation(); switchView('calculator'); loadPatientIntoCalc('${escHtml(p.id)}')">Calc</button>
+          </div>
+        </td>
       </tr>`;
     }
 
     // Discharged patients
     for (const p of discharged) {
       const mod = p.modified ? new Date(p.modified).toLocaleDateString() + ' ' + new Date(p.modified).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) : '—';
-      html += `<tr style="opacity:0.6;">
+      html += `<tr class="census-clickable-row" tabindex="0" role="button" onclick="openPatientContextById('${escHtml(p.id)}', { view: true })" onkeydown="if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openPatientContextById('${escHtml(p.id)}', { view: true }); }" style="opacity:0.6;">
         <td class="census-name" style="color:var(--text-dim);">${escHtml(p.name)}</td>
         <td class="census-dx" title="${escHtml(p.dx)}">${escHtml(p.dx || '—')}</td>
         <td>${escHtml(p.admitted || '—')}</td>
         <td><span class="census-tag dc">DC'd</span></td>
         <td style="font-size:0.6rem;color:var(--text-dim);">${mod}</td>
+        <td>
+          <div class="census-row-actions">
+            <button class="census-inline-btn" onclick="event.stopPropagation(); openPatientContextById('${escHtml(p.id)}', { view: true })">Context</button>
+          </div>
+        </td>
       </tr>`;
     }
 
@@ -1602,20 +1489,88 @@ const DRUG_DOSING = {
   }
 };
 
+function buildPatientAwareDosingHints(drugKey, crcl) {
+  if (typeof getActivePatientClinicalSnapshot !== 'function') return '';
+  const snapshot = getActivePatientClinicalSnapshot();
+  if (!snapshot) return '';
+
+  const latest = snapshot.latestLabs || {};
+  const hints = [];
+  const add = (tone, text) => hints.push({ tone, text });
+  const renalRiskDrugs = new Set(['vancomycin', 'gentamicin', 'amikacin', 'acyclovir', 'ganciclovir', 'enoxaparin', 'metformin', 'nitrofurantoin']);
+
+  if (snapshot.egfr !== null && Math.abs(snapshot.egfr - crcl) >= 15) {
+    add('warn', `Manual renal input ${crcl} differs from active-patient eGFR ${snapshot.egfr}. Recheck which estimate you want to dose from.`);
+  }
+  if (renalRiskDrugs.has(drugKey) && snapshot.egfr !== null && snapshot.egfr < 30) {
+    add('danger', `Active patient eGFR is ${snapshot.egfr}. This is a high-risk renal dosing situation.`);
+  }
+  if (latest.Cr !== undefined && snapshot.previousLabs && snapshot.previousLabs.Cr !== undefined && latest.Cr > snapshot.previousLabs.Cr + 0.2) {
+    add('warn', `Creatinine is rising (${snapshot.previousLabs.Cr} → ${latest.Cr}). If renal function is changing quickly, fixed interval dosing may age badly.`);
+  }
+  if (drugKey === 'tmpSmx' && latest.K !== undefined && latest.K >= 5.0) {
+    add(latest.K >= 5.5 ? 'danger' : 'warn', `Latest potassium is ${latest.K}. TMP-SMX can worsen hyperkalemia.`);
+  }
+  if (drugKey === 'ganciclovir') {
+    if (latest.ANC !== undefined && latest.ANC < 1000) add(latest.ANC < 500 ? 'danger' : 'warn', `ANC is ${latest.ANC}. Ganciclovir can worsen neutropenia.`);
+    if (latest.Plt !== undefined && latest.Plt < 100) add('warn', `Platelets are ${latest.Plt}. Ganciclovir can worsen cytopenias.`);
+  }
+  if (drugKey === 'enoxaparin') {
+    if (latest.Plt !== undefined && latest.Plt < 100) add('warn', `Platelets are ${latest.Plt}. Recheck bleeding/HIT context before anticoagulant dosing.`);
+    if (snapshot.egfr !== null && snapshot.egfr < 30) add('warn', 'Renal impairment increases enoxaparin accumulation and bleeding risk.');
+  }
+  if (drugKey === 'nitrofurantoin' && snapshot.egfr !== null && snapshot.egfr < 30) {
+    add('danger', 'Active patient renal function is below the usual nitrofurantoin threshold.');
+  }
+  if (drugKey === 'metformin' && latest.HCO3 !== undefined && latest.HCO3 < 20) {
+    add('warn', `HCO3 is ${latest.HCO3}. If there is active acidosis or sepsis, metformin is a poor fit even before the chronic renal threshold.`);
+  }
+
+  if (hints.length === 0) {
+    add('info', 'No extra patient-specific dosing flags detected from the active context.');
+  }
+
+  const chips = [];
+  if (snapshot.egfr !== null) chips.push(`eGFR ${snapshot.egfr}`);
+  if (latest.Cr !== undefined) chips.push(`Cr ${latest.Cr}`);
+  if (latest.K !== undefined) chips.push(`K ${latest.K}`);
+  if (latest.ANC !== undefined) chips.push(`ANC ${latest.ANC}`);
+  if (latest.Plt !== undefined) chips.push(`Plt ${latest.Plt}`);
+
+  return `
+    <div style="margin-top:0.55rem;padding-top:0.5rem;border-top:1px dashed var(--border);">
+      <div style="font-size:0.72em;font-weight:700;color:var(--text);">Active Patient Context: ${escHtml(snapshot.name)}</div>
+      <div style="font-size:0.68em;color:var(--text-dim);margin-top:0.15rem;">${escHtml(snapshot.dx || '—')}${chips.length ? ` · ${escHtml(chips.join(' · '))}` : ''}</div>
+      <div style="margin-top:0.35rem;display:flex;flex-direction:column;gap:0.28rem;">
+        ${hints.map((hint) => `<div style="font-size:0.72em;line-height:1.5;color:${hint.tone === 'danger' ? 'var(--red)' : hint.tone === 'warn' ? 'var(--warn)' : 'var(--text-dim)'};">${escHtml(hint.text)}</div>`).join('')}
+      </div>
+    </div>`;
+}
+
 function calcDosing() {
   const drugKey = document.getElementById('dosing-drug').value;
+  const el = document.getElementById('dosing-result');
+  hydrateDosingInputsFromActivePatient();
   const wt = parseFloat(document.getElementById('dosing-wt').value);
   const crcl = parseFloat(document.getElementById('dosing-crcl').value);
-  const el = document.getElementById('dosing-result');
 
   if (!drugKey) { el.textContent = '—'; el.className = 'calc-result'; return; }
-  if (!wt || wt <= 0) { el.textContent = 'Enter patient weight'; el.className = 'calc-result warn'; return; }
-  if (isNaN(crcl) || crcl < 0) { el.textContent = 'Enter CrCl / eGFR'; el.className = 'calc-result warn'; return; }
+  if (!wt || wt <= 0) {
+    el.innerHTML = `Enter patient weight${buildPatientAwareDosingHints(drugKey, crcl)}`;
+    el.className = 'calc-result warn rich';
+    return;
+  }
+  if (isNaN(crcl) || crcl < 0) {
+    el.innerHTML = `Enter CrCl / eGFR${buildPatientAwareDosingHints(drugKey, crcl)}`;
+    el.className = 'calc-result warn rich';
+    return;
+  }
 
   const drug = DRUG_DOSING[drugKey];
   if (!drug) { el.textContent = 'Drug not found'; el.className = 'calc-result'; return; }
 
   const result = drug.calc(wt, crcl);
+  const patientAwareHints = buildPatientAwareDosingHints(drugKey, crcl);
   let cls = 'success';
   if (result.dose === 'AVOID' || result.dose === 'CONTRAINDICATED') cls = 'danger';
   else if (crcl < 30) cls = 'warn';
@@ -1623,9 +1578,17 @@ function calcDosing() {
   el.innerHTML = `<strong>${drug.name}</strong> [${drug.route}]<br>
     <span style="font-size:0.85em;">Dose: <strong>${result.dose}</strong> &nbsp;|&nbsp; Interval: <strong>${result.interval}</strong></span><br>
     <span style="font-size:0.75em;color:var(--text-dim);margin-top:0.25rem;display:block;">${drug.note}</span>
-    <span style="font-size:0.75em;margin-top:0.25rem;display:block;">${result.note}</span>`;
-  el.className = `calc-result ${cls}`;
+    <span style="font-size:0.75em;margin-top:0.25rem;display:block;">${result.note}</span>
+    ${patientAwareHints}`;
+  el.className = `calc-result ${cls} rich`;
 }
+
+window.addEventListener('patient-context-updated', () => {
+  const drugEl = document.getElementById('dosing-drug');
+  if (!drugEl) return;
+  hydrateDosingInputsFromActivePatient();
+  if (drugEl.value) calcDosing();
+});
 
 function clearDosingCalc() {
   document.getElementById('dosing-drug').value = '';
@@ -1635,19 +1598,63 @@ function clearDosingCalc() {
   el.textContent = '—'; el.className = 'calc-result';
 }
 
-function pullGFRIntoDosingCalc() {
-  // Try egfr-result text first: "eGFR: 45 mL/min/1.73m²  ·  Stage 3a CKD"
-  const egfrEl = document.getElementById('egfr-result');
+function extractPatientWeight(record) {
+  if (!record) return null;
+  const match = record.match(/(?:Weight|BW|Wt)\s*[:=]?\s*([\d.]+)\s*(?:kg)?/i);
+  if (!match) return null;
+  const value = parseFloat(match[1]);
+  return Number.isFinite(value) && value > 0 ? value : null;
+}
+
+function getCurrentRenalEstimate() {
   const crclEl = document.getElementById('crcl-result');
-  let val = null;
+  const egfrEl = document.getElementById('egfr-result');
+
+  if (crclEl && crclEl.textContent !== '—') {
+    const match = crclEl.textContent.match(/([\d.]+)\s*mL/i);
+    if (match) return parseFloat(match[1]);
+  }
   if (egfrEl && egfrEl.textContent !== '—') {
-    const m = egfrEl.textContent.match(/([\d.]+)\s*mL/);
-    if (m) val = parseFloat(m[1]);
+    const match = egfrEl.textContent.match(/([\d.]+)\s*mL/i);
+    if (match) return parseFloat(match[1]);
   }
-  if (!val && crclEl && crclEl.textContent !== '—') {
-    const m = crclEl.textContent.match(/([\d.]+)\s*mL/);
-    if (m) val = parseFloat(m[1]);
+  return null;
+}
+
+function hydrateDosingInputsFromActivePatient() {
+  const wtEl = document.getElementById('dosing-wt');
+  const crclEl = document.getElementById('dosing-crcl');
+  if (!wtEl || !crclEl) return false;
+
+  let updated = false;
+  const record = (typeof activePatientData !== 'undefined' && activePatientData && activePatientData.content)
+    ? activePatientData.content
+    : '';
+  const snapshot = typeof getActivePatientClinicalSnapshot === 'function'
+    ? getActivePatientClinicalSnapshot()
+    : null;
+
+  if (!wtEl.value) {
+    const weight = extractPatientWeight(record);
+    if (weight !== null) {
+      wtEl.value = weight;
+      updated = true;
+    }
   }
+
+  if (!crclEl.value) {
+    const renalEstimate = getCurrentRenalEstimate() || (snapshot && snapshot.egfr !== null ? snapshot.egfr : null);
+    if (renalEstimate !== null && renalEstimate !== undefined) {
+      crclEl.value = Math.round(renalEstimate * 10) / 10;
+      updated = true;
+    }
+  }
+
+  return updated;
+}
+
+function pullGFRIntoDosingCalc() {
+  const val = getCurrentRenalEstimate();
   if (val) {
     document.getElementById('dosing-crcl').value = val;
     calcDosing();

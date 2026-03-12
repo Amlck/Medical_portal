@@ -50,7 +50,7 @@ app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50 MB upload limit
 DEFAULT_PORTAL_CONFIG = {
     "portal_title": "Medical Portal — Clinical Tools",
     "brand_name": "MEDICAL PORTAL",
-    "brand_tagline": "Clinical Tools",
+    "brand_tagline": "Dr.Su's medportal, V1.0",
     "footer_note": "",
     "lab_paste_toggle_label": "Paste Lab Data",
     "lab_paste_placeholder": "Paste lab report here",
@@ -340,6 +340,10 @@ html[data-theme="dark"] #sendToHandoffBtn { box-shadow: 0 4px 12px rgba(0,0,0,0.
       if (entryParts.length === 0) {
         btn.innerHTML = '&#10003; Created in Handoff';
         btn.className = 'success';
+        if (window.parent !== window) {
+          window.parent.postMessage({ type: 'handoff-refresh', patientId: pid }, '*');
+          window.parent.postMessage({ type: 'handoff-patient-created', patientId: pid }, '*');
+        }
         setTimeout(function() { btn.innerHTML = '&#9883; Send to Handoff'; btn.className = ''; btn.disabled = false; }, 3000);
         return;
       }
@@ -356,7 +360,8 @@ html[data-theme="dark"] #sendToHandoffBtn { box-shadow: 0 4px 12px rgba(0,0,0,0.
         btn.className = 'success';
         // Notify parent portal to refresh handoff iframe
         if (window.parent !== window) {
-          window.parent.postMessage({ type: 'handoff-refresh' }, '*');
+          window.parent.postMessage({ type: 'handoff-refresh', patientId: pid }, '*');
+          window.parent.postMessage({ type: 'handoff-patient-created', patientId: pid }, '*');
         }
         setTimeout(function() { btn.innerHTML = '&#9883; Send to Handoff'; btn.className = ''; btn.disabled = false; }, 3000);
       });
@@ -571,6 +576,7 @@ def index():
         "portal_shell_js": "static/js/portal-shell.js",
         "portal_phi_js": "static/js/portal-phi.js",
         "portal_calculators_js": "static/js/portal-calculators.js",
+        "portal_patient_context_js": "static/js/portal-patient-context.js",
         "portal_music_js": "static/js/portal-music.js",
         "portal_nav_js": "static/js/portal-nav.js",
     }.items():

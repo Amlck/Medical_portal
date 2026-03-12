@@ -45,13 +45,18 @@
           <span class="result-title" id="result-title">De-identification Complete</span>
           <span class="result-meta" id="result-meta"></span>
           <div class="result-actions">
+            <button class="btn-secondary" id="phi-copy-btn" onclick="copyPhiResultText()" disabled>Copy Clean Text</button>
+            <button class="btn-primary" id="phi-send-handoff-btn" onclick="sendPhiResultToHandoff()" disabled>Send to Handoff</button>
             <button class="btn-green" onclick="downloadResult()">Download .txt</button>
             <button class="btn-secondary" onclick="resetPhi()">Process Another</button>
           </div>
         </div>
         <div class="result-body">
           <div class="result-summary" id="result-summary"></div>
-          <div class="result-preview" id="result-preview"></div>
+          <div>
+            <div class="consults-status" id="phi-result-status"></div>
+            <div class="result-preview" id="result-preview"></div>
+          </div>
         </div>
       </div>
     </div>

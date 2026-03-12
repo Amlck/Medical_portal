@@ -140,14 +140,18 @@
       display: flex;
       flex-direction: column;
       overflow: hidden;
+      min-width: 0;
+      min-height: 0;
     }
 
     /* ---- Tabs ---- */
     .tabs {
       display: flex;
+      flex-wrap: wrap;
       border-bottom: 1px solid var(--border);
       background: var(--surface);
       flex-shrink: 0;
+      overflow-x: auto;
     }
     .tab {
       padding: 0.6rem 1.25rem;
@@ -162,6 +166,7 @@
       border-top: none;
       border-left: none;
       border-right: none;
+      flex-shrink: 0;
     }
     .tab:hover { color: var(--text); }
     .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
@@ -169,6 +174,273 @@
     /* ---- Tab content ---- */
     .tab-content { display: none; flex: 1; overflow: hidden; min-height: 0; }
     .tab-content.active { display: flex; flex-direction: column; min-height: 0; }
+
+    /* ---- Chart view ---- */
+    .chart-panel {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding: 1rem 1.1rem 1.25rem;
+      display: block;
+      min-height: 0;
+      overscroll-behavior: contain;
+    }
+    .chart-panel > * + * {
+      margin-top: 0.85rem;
+    }
+    .chart-hero {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: linear-gradient(135deg, var(--surface) 0%, var(--surface2) 100%);
+      padding: 0.9rem 1rem;
+      min-width: 0;
+      flex-shrink: 0;
+    }
+    .chart-hero-top {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 1rem;
+      align-items: flex-start;
+    }
+    .chart-hero-copy {
+      flex: 1 1 320px;
+      min-width: 0;
+    }
+    .chart-title {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--text);
+      word-break: break-word;
+    }
+    .chart-subtitle {
+      margin-top: 0.2rem;
+      font-size: 0.68rem;
+      line-height: 1.55;
+      color: var(--text-dim);
+      word-break: break-word;
+    }
+    .chart-badge {
+      flex-shrink: 0;
+      align-self: flex-start;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 0.3rem 0.6rem;
+      font-size: 0.58rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--accent);
+      background: var(--accent-bg);
+    }
+    .chart-summary-grid {
+      margin-top: 0.7rem;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 0.5rem;
+    }
+    .chart-summary-card {
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--surface);
+      padding: 0.55rem 0.65rem;
+      min-width: 0;
+    }
+    .chart-summary-card span {
+      display: block;
+      font-size: 0.54rem;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 0.2rem;
+    }
+    .chart-summary-card strong {
+      display: block;
+      font-size: 0.66rem;
+      line-height: 1.55;
+      color: var(--text);
+      word-break: break-word;
+    }
+    .chart-section {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface);
+      overflow: hidden;
+      min-width: 0;
+      flex-shrink: 0;
+    }
+    .chart-section-header {
+      padding: 0.55rem 0.8rem;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface2);
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 0.6rem;
+      align-items: center;
+    }
+    .chart-section-header strong {
+      font-size: 0.68rem;
+      letter-spacing: 0.04em;
+      color: var(--text);
+      min-width: 0;
+    }
+    .chart-section-header span {
+      font-size: 0.58rem;
+      color: var(--text-dim);
+      min-width: 0;
+      word-break: break-word;
+      text-align: left;
+    }
+    .chart-chip-row {
+      padding: 0.7rem 0.8rem 0.8rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+    }
+    .chart-chip {
+      background: transparent;
+      color: var(--text-dim);
+      border: 1px solid var(--border);
+      padding: 0.3rem 0.55rem;
+      border-radius: 999px;
+      font-size: 0.58rem;
+    }
+    .chart-chip:hover {
+      color: var(--text);
+      border-color: var(--accent);
+      background: var(--accent-bg);
+    }
+    .chart-latest-grid {
+      padding: 0.8rem;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 0.6rem;
+    }
+    .chart-latest-card {
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--bg);
+      padding: 0.65rem 0.7rem;
+      min-width: 0;
+    }
+    .chart-latest-meta {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 0.5rem;
+      align-items: center;
+      margin-bottom: 0.35rem;
+    }
+    .chart-latest-meta strong {
+      font-size: 0.62rem;
+      color: var(--accent);
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    .chart-latest-meta span {
+      font-size: 0.56rem;
+      color: var(--text-dim);
+      text-align: right;
+      min-width: 0;
+      word-break: break-word;
+    }
+    .chart-latest-body {
+      font-size: 0.63rem;
+      line-height: 1.55;
+      color: var(--text);
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .chart-empty {
+      padding: 1rem;
+      text-align: center;
+      color: var(--text-dim);
+      font-size: 0.7rem;
+      line-height: 1.6;
+    }
+    .chart-timeline-list {
+      padding: 0.8rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.55rem;
+    }
+    .chart-entry {
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--bg);
+      overflow: hidden;
+      scroll-margin-top: 1rem;
+    }
+    .chart-entry summary {
+      list-style: none;
+      cursor: pointer;
+      padding: 0.65rem 0.75rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.7rem;
+      align-items: flex-start;
+    }
+    .chart-entry summary::-webkit-details-marker { display: none; }
+    .chart-entry summary:hover { background: var(--surface2); }
+    .chart-entry-kicker {
+      width: 120px;
+      max-width: 100%;
+      min-width: 0;
+      flex-shrink: 0;
+    }
+    .chart-entry-cat {
+      display: inline-block;
+      padding: 0.15rem 0.42rem;
+      border-radius: 999px;
+      background: var(--accent-bg);
+      color: var(--accent);
+      font-size: 0.54rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .chart-entry-time {
+      margin-top: 0.22rem;
+      font-size: 0.56rem;
+      color: var(--text-dim);
+      line-height: 1.45;
+    }
+    .chart-entry-preview {
+      flex: 1;
+      min-width: 0;
+      font-size: 0.64rem;
+      line-height: 1.6;
+      color: var(--text);
+      word-break: break-word;
+    }
+    .chart-entry-body {
+      padding: 0 0.75rem 0.75rem 0.75rem;
+      font-size: 0.64rem;
+      line-height: 1.6;
+      color: var(--text);
+      white-space: pre-wrap;
+      word-break: break-word;
+      border-top: 1px solid var(--border);
+      background: var(--surface);
+    }
+    .chart-entry[open] .chart-entry-body { padding-top: 0.75rem; }
+
+    @media (max-width: 820px) {
+      .chart-panel {
+        padding: 0.75rem 0.8rem 1rem;
+      }
+      .chart-summary-grid,
+      .chart-latest-grid {
+        grid-template-columns: minmax(0, 1fr);
+      }
+      .chart-entry-kicker {
+        width: 100%;
+      }
+      .chart-latest-meta span {
+        text-align: left;
+      }
+    }
 
     /* ---- Append panel ---- */
     .append-panel { flex: 1; display: flex; flex-direction: column; }
@@ -218,6 +490,32 @@
       line-height: 1.65;
       white-space: pre-wrap;
       color: var(--text-dim);
+    }
+
+    /* ---- Record editor (edit mode) ---- */
+    .record-editor {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1.25rem;
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      line-height: 1.65;
+      color: var(--text);
+      background: var(--surface);
+      border: none;
+      border-top: 2px solid var(--accent);
+      resize: none;
+      outline: none;
+      min-height: 0;
+    }
+    .record-editor:focus { border-top-color: var(--green); }
+    .rec-edit-hint {
+      font-size: 0.65rem;
+      color: var(--accent);
+      padding: 0.25rem 1rem;
+      border-bottom: 1px solid var(--border);
+      background: var(--accent-bg);
+      flex-shrink: 0;
     }
 
     /* ---- Generate panel ---- */
@@ -489,7 +787,7 @@
 
 <header>
   <h1>HANDOFF</h1>
-  <span>Clinical Note Generator</span>
+  <span>Clinical Note Generator &mdash; NTUH</span>
   <div class="header-actions">
     <button class="btn-warn" onclick="batchSBAR()" title="Generate SBAR for all active patients">Batch SBAR</button>
     <button class="btn-secondary" onclick="printChart()" title="Generate printable chart of all patients" style="font-size:0.65rem;">&#128424; Print Chart</button>
@@ -515,15 +813,37 @@
     </div>
 
     <!-- Content (hidden until patient selected) -->
-    <div id="patient-content" style="display:none; flex:1; flex-direction:column; overflow:hidden; min-height:0;">
+    <div id="patient-content" style="display:none; flex:1; flex-direction:column; overflow:hidden; min-height:0; min-width:0;">
       <div class="tabs">
-        <button class="tab active" data-tab="append" onclick="switchTab('append')">Add Data</button>
+        <button class="tab active" data-tab="chart" onclick="switchTab('chart')">Chart View</button>
         <button class="tab" data-tab="record" onclick="switchTab('record')">Full Record</button>
+        <button class="tab" data-tab="append" onclick="switchTab('append')">Add Data</button>
         <button class="tab" data-tab="generate" onclick="switchTab('generate')">Generate Note</button>
       </div>
 
+      <!-- Tab: Chart view -->
+      <div class="tab-content active" id="tab-chart">
+        <div class="chart-panel" id="chart-panel">
+          <div class="chart-empty">Select a patient to load a scan-friendly chart view.</div>
+        </div>
+      </div>
+
+      <!-- Tab: Full record -->
+      <div class="tab-content" id="tab-record">
+        <div class="rec-edit-hint" id="rec-edit-hint" style="display:none">&#9998; Editing — changes are applied directly to the patient file. Press <strong>Save</strong> to confirm or <strong>Cancel</strong> to discard.</div>
+        <div class="record-viewer" id="record-content">Loading...</div>
+        <textarea class="record-editor" id="record-editor" style="display:none" spellcheck="false"></textarea>
+        <div class="btn-bar">
+          <button class="btn-secondary" id="rec-refresh-btn" onclick="refreshRecord()" title="Reload from file">&#8635; Refresh</button>
+          <button class="btn-secondary" id="rec-edit-btn" onclick="toggleRecordEdit()" title="Edit the full record">&#9998; Edit</button>
+          <button class="btn-primary" id="rec-save-btn" onclick="saveRecord()" style="display:none">Save</button>
+          <button class="btn-secondary" id="rec-cancel-btn" onclick="cancelRecordEdit()" style="display:none">Cancel</button>
+          <span class="status" id="rec-save-status"></span>
+        </div>
+      </div>
+
       <!-- Tab: Append data -->
-      <div class="tab-content active" id="tab-append">
+      <div class="tab-content" id="tab-append">
         <div class="append-panel">
           <div class="category-bar">
             <button class="cat-btn active" data-cat="Labs" onclick="setCat(this)">Labs</button>
@@ -550,14 +870,6 @@
         </div>
       </div>
 
-      <!-- Tab: Full record -->
-      <div class="tab-content" id="tab-record">
-        <div class="record-viewer" id="record-content">Loading...</div>
-        <div class="btn-bar">
-          <button class="btn-secondary" onclick="refreshRecord()">Refresh</button>
-        </div>
-      </div>
-
       <!-- Tab: Generate -->
       <div class="tab-content" id="tab-generate">
         <div id="no-api-key-banner" style="display:none; align-items:center; gap:0.6rem; padding:0.6rem 1rem; background:var(--warn-bg); border:1px solid var(--warn); border-radius:6px; margin-bottom:0.6rem; font-size:0.68rem; color:var(--warn);">
@@ -568,7 +880,7 @@
           <div class="gen-controls">
             <button class="gen-type-btn active" data-type="sbar" onclick="setGenType(this)">SBAR Handoff</button>
             <button class="gen-type-btn" data-type="progress" onclick="setGenType(this)">Progress Note</button>
-            <button class="gen-type-btn" data-type="discharge_chrono" onclick="setGenType(this)">DC: Chronological</button>
+            <button class="gen-type-btn" data-type="discharge_ntuh" onclick="setGenType(this)">DC: NTUH</button>
             <button class="gen-type-btn" data-type="discharge" onclick="setGenType(this)">DC: Problem-Oriented</button>
             <button class="btn-green" style="margin-left:auto;" onclick="generateNote()">Generate<span class="kbd-hint" id="kbd-generate"></span></button>
             <button class="btn-secondary" id="btn-copy" style="display:none;" onclick="copyOutput()">Copy</button>
@@ -616,7 +928,62 @@
 let currentPatient = null;
 let currentCategory = 'Labs';
 let currentGenType = 'sbar';
+let recordEditing = false;
 let aiAvailable = false;
+let currentTab = 'chart';
+let currentRecordContent = '';
+const handledPortalSeedRequests = new Set();
+
+const TAB_STORAGE = 'handoff-last-tab';
+const PATIENT_STORAGE = 'handoff-last-patient';
+const APPEND_DRAFT_PREFIX = 'handoff-append-draft:';
+const APPEND_CATEGORY_PREFIX = 'handoff-append-category:';
+const RECORD_DRAFT_PREFIX = 'handoff-record-draft:';
+const VALID_TABS = new Set(['chart', 'record', 'append', 'generate']);
+const HEADER_FIELDS = ['Age/Sex', 'MRN', 'Admitted', 'Admitting Dx', 'PMH', 'Allergies', 'Code Status', 'Primary Team'];
+
+function storageGet(key) {
+  try { return localStorage.getItem(key); } catch (err) { return null; }
+}
+
+function storageSet(key, value) {
+  try { localStorage.setItem(key, value); } catch (err) {}
+}
+
+function storageRemove(key) {
+  try { localStorage.removeItem(key); } catch (err) {}
+}
+
+function normalizeTab(name) {
+  return VALID_TABS.has(name) ? name : 'chart';
+}
+
+function getPreferredTab(fallback) {
+  return normalizeTab(fallback || storageGet(TAB_STORAGE) || 'chart');
+}
+
+function setCurrentTab(name) {
+  currentTab = normalizeTab(name);
+  storageSet(TAB_STORAGE, currentTab);
+}
+
+function setCurrentPatientId(pid) {
+  currentPatient = pid || null;
+  if (currentPatient) storageSet(PATIENT_STORAGE, currentPatient);
+  else storageRemove(PATIENT_STORAGE);
+}
+
+function getAppendDraftKey(pid) {
+  return `${APPEND_DRAFT_PREFIX}${pid}`;
+}
+
+function getAppendCategoryKey(pid) {
+  return `${APPEND_CATEGORY_PREFIX}${pid}`;
+}
+
+function getRecordDraftKey(pid) {
+  return `${RECORD_DRAFT_PREFIX}${pid}`;
+}
 
 // ---------------------------------------------------------------------------
 // API Key — read from shared localStorage (set in portal Settings)
@@ -675,9 +1042,299 @@ window.addEventListener('message', e => {
 // Check on load
 setTimeout(checkAiAvailable, 500);
 
+function getAppendDraftValue(pid) {
+  return pid ? (storageGet(getAppendDraftKey(pid)) || '') : '';
+}
+
+function saveAppendDraft(pid) {
+  if (!pid) return;
+  const input = document.getElementById('append-input');
+  if (!input) return;
+  const value = input.value || '';
+  if (value.trim()) storageSet(getAppendDraftKey(pid), value);
+  else storageRemove(getAppendDraftKey(pid));
+  storageSet(getAppendCategoryKey(pid), currentCategory);
+}
+
+function clearAppendDraft(pid) {
+  if (!pid) return;
+  storageRemove(getAppendDraftKey(pid));
+  storageRemove(getAppendCategoryKey(pid));
+}
+
+function applySavedCategory(pid) {
+  const savedCategory = pid ? storageGet(getAppendCategoryKey(pid)) : null;
+  const targetCategory = savedCategory || 'Labs';
+  const targetBtn = Array.from(document.querySelectorAll('.cat-btn')).find(btn => btn.dataset.cat === targetCategory)
+    || document.querySelector('.cat-btn[data-cat="Labs"]');
+  if (targetBtn) setCat(targetBtn, { persist: false });
+}
+
+function loadAppendDraft(pid) {
+  const input = document.getElementById('append-input');
+  const status = document.getElementById('append-status');
+  if (!input || !status) return;
+  applySavedCategory(pid);
+  const draft = getAppendDraftValue(pid);
+  input.value = draft;
+  if (draft.trim()) {
+    status.textContent = 'Draft restored';
+    status.className = 'status';
+  } else {
+    status.textContent = '';
+    status.className = 'status';
+  }
+}
+
+function setAppendCategoryByName(category) {
+  const target = Array.from(document.querySelectorAll('.cat-btn')).find(btn => btn.dataset.cat === category)
+    || document.querySelector('.cat-btn[data-cat="Clinical Note"]');
+  if (target) setCat(target);
+}
+
+function seedAppendDraftFromPortal(pid, text, category) {
+  const input = document.getElementById('append-input');
+  const status = document.getElementById('append-status');
+  if (!input || !status) return;
+  const cleanText = (text || '').trim();
+  if (!cleanText) return;
+
+  const existing = input.value.trim();
+  const merged = existing
+    ? (existing.includes(cleanText) ? input.value : `${input.value.replace(/\s+$/, '')}\n\n${cleanText}`)
+    : cleanText;
+
+  setAppendCategoryByName(category || 'Clinical Note');
+  input.value = merged;
+  if (pid) saveAppendDraft(pid);
+  status.textContent = existing ? 'Imported de-identified text appended to current draft.' : 'Imported de-identified text into Add Data.';
+  status.className = 'status';
+}
+
+function getRecordDraftValue(pid) {
+  return pid ? (storageGet(getRecordDraftKey(pid)) || '') : '';
+}
+
+function saveRecordDraft(pid, value) {
+  if (!pid) return;
+  if ((value || '').trim()) storageSet(getRecordDraftKey(pid), value);
+  else storageRemove(getRecordDraftKey(pid));
+}
+
+function clearRecordDraft(pid) {
+  if (!pid) return;
+  storageRemove(getRecordDraftKey(pid));
+}
+
+function hasUnsavedRecordChanges() {
+  if (!recordEditing) return false;
+  const editor = document.getElementById('record-editor');
+  const viewer = document.getElementById('record-content');
+  return !!editor && !!viewer && editor.value !== viewer.textContent;
+}
+
+function hasAppendDraft() {
+  const input = document.getElementById('append-input');
+  return !!input && !!input.value.trim();
+}
+
+function shouldWarnBeforeUnload() {
+  return hasAppendDraft() || hasUnsavedRecordChanges();
+}
+
+function maybeLeaveRecordEdit() {
+  if (!recordEditing) return true;
+  if (!hasUnsavedRecordChanges()) {
+    cancelRecordEdit();
+    return true;
+  }
+  const leave = window.confirm('You have unsaved Full Record edits. Leave this view and keep the draft for later?');
+  if (!leave) return false;
+  cancelRecordEdit({ keepDraft: true, keepStatus: true });
+  return true;
+}
+
+function preserveWorkingDrafts() {
+  if (currentPatient) saveAppendDraft(currentPatient);
+  return maybeLeaveRecordEdit();
+}
+
+function getEntryAnchorId(index) {
+  return `chart-entry-${index}`;
+}
+
+function getExcerpt(text) {
+  const clean = (text || '').replace(/\s+/g, ' ').trim();
+  if (!clean) return 'No details documented.';
+  return clean.length > 180 ? `${clean.slice(0, 177)}...` : clean;
+}
+
+function formatChartBody(text) {
+  return esc(text || '');
+}
+
+function parseRecordContent(content) {
+  const text = content || '';
+  const nameMatch = text.match(/^# Patient:\s*(.+)$/m);
+  const header = {};
+  const headerRegex = /^- \*\*(.+?):\*\*\s*(.*)$/gm;
+  let headerMatch;
+  while ((headerMatch = headerRegex.exec(text))) {
+    header[headerMatch[1].trim()] = (headerMatch[2] || '').trim();
+  }
+
+  const entryMatches = [];
+  const entryRegex = /^##\s+(.+?)\s+—\s+(.+)$/gm;
+  let match;
+  while ((match = entryRegex.exec(text))) {
+    entryMatches.push({
+      index: match.index,
+      heading: match[0],
+      timestamp: match[1].trim(),
+      category: match[2].trim(),
+    });
+  }
+
+  const entries = entryMatches.map((entry, index) => {
+    const bodyStart = entry.index + entry.heading.length;
+    const bodyEnd = index + 1 < entryMatches.length ? entryMatches[index + 1].index : text.length;
+    const body = text.slice(bodyStart, bodyEnd).trim();
+    return {
+      id: getEntryAnchorId(entryMatches.length - index),
+      timestamp: entry.timestamp,
+      category: entry.category,
+      body,
+      excerpt: getExcerpt(body),
+    };
+  }).reverse();
+
+  const latestByCategory = {};
+  for (const entry of entries) {
+    if (!latestByCategory[entry.category]) latestByCategory[entry.category] = entry;
+  }
+
+  return {
+    name: nameMatch ? nameMatch[1].trim() : '',
+    header,
+    entries,
+    latestByCategory,
+  };
+}
+
+function renderChartRecord(content) {
+  const panel = document.getElementById('chart-panel');
+  if (!panel) return;
+
+  const parsed = parseRecordContent(content);
+  const summaryCards = HEADER_FIELDS
+    .filter(field => parsed.header[field])
+    .map(field => `
+      <div class="chart-summary-card">
+        <span>${esc(field)}</span>
+        <strong>${esc(parsed.header[field])}</strong>
+      </div>
+    `)
+    .join('');
+
+  const latestEntries = Object.values(parsed.latestByCategory);
+  const chips = latestEntries.length
+    ? latestEntries.map(entry => `
+        <button class="chart-chip" type="button" onclick="jumpToChartEntry('${entry.id}')">
+          ${esc(entry.category)} · ${esc(entry.timestamp)}
+        </button>
+      `).join('')
+    : '<div class="chart-empty">No appended entries yet.</div>';
+
+  const latestCards = latestEntries.length
+    ? latestEntries.map(entry => `
+        <div class="chart-latest-card">
+          <div class="chart-latest-meta">
+            <strong>${esc(entry.category)}</strong>
+            <span>${esc(entry.timestamp)}</span>
+          </div>
+          <div class="chart-latest-body">${formatChartBody(entry.excerpt)}</div>
+        </div>
+      `).join('')
+    : '<div class="chart-empty">Add labs, notes, imaging, or consults to populate the latest-by-category view.</div>';
+
+  const timeline = parsed.entries.length
+    ? parsed.entries.map((entry, index) => `
+        <details class="chart-entry" id="${entry.id}" ${index < 3 ? 'open' : ''}>
+          <summary>
+            <div class="chart-entry-kicker">
+              <span class="chart-entry-cat">${esc(entry.category)}</span>
+              <div class="chart-entry-time">${esc(entry.timestamp)}</div>
+            </div>
+            <div class="chart-entry-preview">${esc(entry.excerpt)}</div>
+          </summary>
+          <div class="chart-entry-body">${formatChartBody(entry.body)}</div>
+        </details>
+      `).join('')
+    : '<div class="chart-empty">No timeline entries yet. Use Add Data to start building the chart.</div>';
+
+  const latestStamp = parsed.entries.length ? parsed.entries[0].timestamp : 'No entries yet';
+  const entryCountLabel = parsed.entries.length === 1 ? '1 entry' : `${parsed.entries.length} entries`;
+  panel.innerHTML = `
+    <div class="chart-hero">
+      <div class="chart-hero-top">
+        <div class="chart-hero-copy">
+          <div class="chart-title">${esc(parsed.name || 'Selected Patient')}</div>
+          <div class="chart-subtitle">
+            ${esc(parsed.header['Admitting Dx'] || 'No admitting diagnosis entered')}
+          </div>
+        </div>
+        <div class="chart-badge">${esc(entryCountLabel)}</div>
+      </div>
+      <div class="chart-summary-grid">
+        ${summaryCards || `
+          <div class="chart-summary-card">
+            <span>Header</span>
+            <strong>No structured header fields filled yet.</strong>
+          </div>
+        `}
+      </div>
+    </div>
+
+    <section class="chart-section">
+      <div class="chart-section-header">
+        <strong>Jump To Latest</strong>
+        <span>Newest update: ${esc(latestStamp)}</span>
+      </div>
+      <div class="chart-chip-row">${chips}</div>
+    </section>
+
+    <section class="chart-section">
+      <div class="chart-section-header">
+        <strong>Latest By Category</strong>
+        <span>Most recent note, lab, consult, and medication changes at a glance</span>
+      </div>
+      <div class="chart-latest-grid">${latestCards}</div>
+    </section>
+
+    <section class="chart-section">
+      <div class="chart-section-header">
+        <strong>Timeline</strong>
+        <span>Newest first</span>
+      </div>
+      <div class="chart-timeline-list">${timeline}</div>
+    </section>
+  `;
+}
+
+function jumpToChartEntry(id) {
+  const target = document.getElementById(id);
+  if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
 // ---------------------------------------------------------------------------
 // Patients
 // ---------------------------------------------------------------------------
+function postToPortal(message) {
+  if (window.parent !== window) {
+    try { window.parent.postMessage(message, '*'); } catch (err) {}
+  }
+}
+
 async function loadPatients() {
   const res = await fetch('/api/patients');
   const patients = await res.json();
@@ -685,7 +1342,7 @@ async function loadPatients() {
 
   if (patients.length === 0) {
     list.innerHTML = '<div class="empty-state">No patients yet.<br>Click "+ New" to add one.</div>';
-    return;
+    return patients;
   }
 
   list.innerHTML = patients.map(p => {
@@ -701,25 +1358,46 @@ async function loadPatients() {
       </div>
     </div>`;
   }).join('');
+  return patients;
 }
 
-function selectPatient(pid) {
-  currentPatient = pid;
+function selectPatient(pid, options = {}) {
+  if (!pid) return;
+  if (currentPatient && currentPatient !== pid) {
+    if (!preserveWorkingDrafts()) return;
+  }
+  dismissLabBanner();
+  setCurrentPatientId(pid);
   document.getElementById('no-selection').style.display = 'none';
   const pc = document.getElementById('patient-content');
   pc.style.display = 'flex';
+  loadAppendDraft(pid);
   loadPatients(); // refresh active state
   refreshRecord();
+  if (options.broadcast !== false) {
+    postToPortal({ type: 'handoff-patient-selected', patientId: pid });
+  }
 }
 
 async function dischargePatient(pid) {
+  if (currentPatient === pid && !preserveWorkingDrafts()) return;
   if (!confirm('Mark this patient as discharged? They will appear greyed out in the list.')) return;
+  const appendDraft = currentPatient === pid ? getAppendDraftValue(pid) : '';
+  const appendCategory = currentPatient === pid ? storageGet(getAppendCategoryKey(pid)) : '';
+  const recordDraft = currentPatient === pid ? getRecordDraftValue(pid) : '';
   const res = await fetch(`/api/patients/${pid}/discharge`, { method: 'POST' });
   if (res.ok) {
     const data = await res.json();
-    currentPatient = data.id; // switch to new _dc id
+    if (appendDraft.trim()) storageSet(getAppendDraftKey(data.id), appendDraft);
+    if (appendCategory) storageSet(getAppendCategoryKey(data.id), appendCategory);
+    if (recordDraft.trim()) storageSet(getRecordDraftKey(data.id), recordDraft);
+    clearAppendDraft(pid);
+    clearRecordDraft(pid);
+    setCurrentPatientId(data.id); // switch to new _dc id
     loadPatients();
+    loadAppendDraft(data.id);
     refreshRecord();
+    postToPortal({ type: 'handoff-patient-selected', patientId: data.id });
   } else {
     const err = await res.json();
     alert(err.error);
@@ -727,13 +1405,19 @@ async function dischargePatient(pid) {
 }
 
 async function deletePatient(pid, name) {
+  if (currentPatient === pid && !preserveWorkingDrafts()) return;
   if (!confirm(`Permanently delete ${name}? This cannot be undone.`)) return;
   const res = await fetch(`/api/patients/${pid}`, { method: 'DELETE' });
   if (res.ok) {
+    clearAppendDraft(pid);
+    clearRecordDraft(pid);
     if (currentPatient === pid) {
-      currentPatient = null;
+      setCurrentPatientId('');
+      currentRecordContent = '';
       document.getElementById('patient-content').style.display = 'none';
       document.getElementById('no-selection').style.display = 'flex';
+      document.getElementById('chart-panel').innerHTML = '<div class="chart-empty">Select a patient to load a scan-friendly chart view.</div>';
+      postToPortal({ type: 'handoff-patient-selected', patientId: '' });
     }
     loadPatients();
   } else {
@@ -788,24 +1472,31 @@ async function createPatient() {
   );
 
   selectPatient(data.id);
+  postToPortal({ type: 'handoff-patient-created', patientId: data.id });
 }
 
 // ---------------------------------------------------------------------------
 // Tabs
 // ---------------------------------------------------------------------------
 function switchTab(name) {
-  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
-  document.querySelectorAll('.tab-content').forEach(tc => tc.classList.toggle('active', tc.id === `tab-${name}`));
-  if (name === 'record') refreshRecord();
+  const targetTab = normalizeTab(name);
+  if (targetTab !== 'record' && !maybeLeaveRecordEdit()) return;
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === targetTab));
+  document.querySelectorAll('.tab-content').forEach(tc => tc.classList.toggle('active', tc.id === `tab-${targetTab}`));
+  setCurrentTab(targetTab);
+  if ((targetTab === 'record' || targetTab === 'chart') && currentPatient) refreshRecord();
 }
 
 // ---------------------------------------------------------------------------
 // Category selector
 // ---------------------------------------------------------------------------
-function setCat(btn) {
+function setCat(btn, options = {}) {
   document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   currentCategory = btn.dataset.cat;
+  if (currentPatient && options.persist !== false) {
+    storageSet(getAppendCategoryKey(currentPatient), currentCategory);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -830,6 +1521,9 @@ async function appendData() {
     const data = await res.json();
     status.textContent = `Appended (${data.timestamp})`;
     input.value = '';
+    clearAppendDraft(currentPatient);
+    dismissLabBanner();
+    refreshRecord();
   } else {
     const err = await res.json();
     status.className = 'status error';
@@ -843,12 +1537,117 @@ async function appendData() {
 async function refreshRecord() {
   if (!currentPatient) return;
   const viewer = document.getElementById('record-content');
+  const chartPanel = document.getElementById('chart-panel');
   const res = await fetch(`/api/patients/${currentPatient}`);
   if (res.ok) {
     const data = await res.json();
+    currentRecordContent = data.content;
     viewer.textContent = data.content;
+    renderChartRecord(data.content);
+    if (recordEditing) {
+      const editor = document.getElementById('record-editor');
+      if (editor && !hasUnsavedRecordChanges()) {
+        editor.value = data.content;
+      }
+    }
   } else {
+    currentRecordContent = '';
     viewer.textContent = 'Error loading record.';
+    if (chartPanel) chartPanel.innerHTML = '<div class="chart-empty">Error loading patient record.</div>';
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Record edit mode
+// ---------------------------------------------------------------------------
+function toggleRecordEdit() {
+  if (recordEditing) return;
+  const viewer   = document.getElementById('record-content');
+  const editor   = document.getElementById('record-editor');
+  const hint     = document.getElementById('rec-edit-hint');
+  const editBtn  = document.getElementById('rec-edit-btn');
+  const saveBtn  = document.getElementById('rec-save-btn');
+  const cancelBtn= document.getElementById('rec-cancel-btn');
+  const refreshBtn=document.getElementById('rec-refresh-btn');
+
+  const savedDraft = getRecordDraftValue(currentPatient);
+  editor.value = savedDraft || viewer.textContent;
+  viewer.style.display  = 'none';
+  editor.style.display  = 'block';
+  hint.style.display    = 'block';
+  editBtn.style.display = 'none';
+  saveBtn.style.display = 'inline-block';
+  cancelBtn.style.display = 'inline-block';
+  refreshBtn.style.display = 'none';
+  if (savedDraft) {
+    status.textContent = 'Draft restored';
+    status.className = 'status';
+  }
+  editor.focus();
+  recordEditing = true;
+}
+
+function cancelRecordEdit(options = {}) {
+  const keepDraft = !!options.keepDraft;
+  const keepStatus = !!options.keepStatus;
+  const viewer   = document.getElementById('record-content');
+  const editor   = document.getElementById('record-editor');
+  const hint     = document.getElementById('rec-edit-hint');
+  const editBtn  = document.getElementById('rec-edit-btn');
+  const saveBtn  = document.getElementById('rec-save-btn');
+  const cancelBtn= document.getElementById('rec-cancel-btn');
+  const refreshBtn=document.getElementById('rec-refresh-btn');
+  const status   = document.getElementById('rec-save-status');
+
+  if (keepDraft && currentPatient) saveRecordDraft(currentPatient, editor.value);
+  else clearRecordDraft(currentPatient);
+
+  viewer.style.display  = 'block';
+  editor.style.display  = 'none';
+  hint.style.display    = 'none';
+  editBtn.style.display = 'inline-block';
+  saveBtn.style.display = 'none';
+  cancelBtn.style.display = 'none';
+  refreshBtn.style.display = 'inline-block';
+  status.textContent = keepStatus && keepDraft ? 'Draft saved' : '';
+  status.className   = 'status';
+  recordEditing = false;
+}
+
+async function saveRecord() {
+  if (!currentPatient) return;
+  const editor  = document.getElementById('record-editor');
+  const viewer  = document.getElementById('record-content');
+  const status  = document.getElementById('rec-save-status');
+  const saveBtn = document.getElementById('rec-save-btn');
+
+  saveBtn.disabled = true;
+  status.textContent = 'Saving…';
+  status.className   = 'status';
+
+  try {
+    const res = await fetch(`/api/patients/${currentPatient}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: editor.value }),
+    });
+    if (!res.ok) {
+      const d = await res.json();
+      throw new Error(d.error || 'Save failed');
+    }
+    // Update viewer with edited content so refresh isn't needed immediately
+    viewer.textContent = editor.value;
+    currentRecordContent = editor.value;
+    clearRecordDraft(currentPatient);
+    renderChartRecord(editor.value);
+    status.textContent = 'Saved ✓';
+    status.className   = 'status ok';
+    setTimeout(cancelRecordEdit, 800);
+  } catch (err) {
+    status.textContent = `Error: ${err.message}`;
+    status.className   = 'status error';
+  } finally {
+    saveBtn.disabled = false;
   }
 }
 
@@ -935,7 +1734,7 @@ async function printChart() {
       return;
     }
 
-    const typeLabel = {sbar:'SBAR Handoff', progress:'Progress Note', discharge:'Discharge Summary', discharge_chrono:'Chronological Discharge'}[genType] || genType;
+    const typeLabel = {sbar:'SBAR Handoff', progress:'Progress Note', discharge:'Discharge Summary', discharge_ntuh:'NTUH Discharge'}[genType] || genType;
 
     // Build print-ready HTML
     let printHtml = `<!DOCTYPE html>
@@ -1079,7 +1878,7 @@ function esc(s) {
 }
 
 // ---------------------------------------------------------------------------
-// Lab Paste — smart detection + structured table formatting
+// NTUH Lab Paste — smart detection + structured table formatting
 // ---------------------------------------------------------------------------
 let pendingLabData = null;  // holds parsed lab rows until user accepts
 
@@ -1100,14 +1899,14 @@ document.addEventListener('DOMContentLoaded', () => {
     let headerInfo = '';
 
     if (htmlData && htmlData.includes('<t')) {
-      const result = parseLabHtml(htmlData);
+      const result = parseNtuhHtml(htmlData);
       labRows = result.rows;
       headerInfo = result.header;
     }
 
     // If no HTML table found, try text-based detection
     if (labRows.length === 0 && textData) {
-      const result = parseLabText(textData);
+      const result = parseNtuhText(textData);
       labRows = result.rows;
       headerInfo = result.header;
     }
@@ -1122,7 +1921,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
-function parseLabHtml(html) {
+function parseNtuhHtml(html) {
   const parser = new DOMParser();
   const doc = parser.parseFromString(html, 'text/html');
   const rows = [];
@@ -1169,7 +1968,7 @@ function parseLabHtml(html) {
   return { rows, header };
 }
 
-function parseLabText(text) {
+function parseNtuhText(text) {
   const rows = [];
   let header = '';
 
@@ -1257,6 +2056,21 @@ function dismissLabBanner() {
   pendingLabData = null;
 }
 
+document.getElementById('append-input').addEventListener('input', () => {
+  if (currentPatient) saveAppendDraft(currentPatient);
+});
+
+document.getElementById('record-editor').addEventListener('input', e => {
+  if (!currentPatient || !recordEditing) return;
+  saveRecordDraft(currentPatient, e.target.value);
+});
+
+window.addEventListener('beforeunload', e => {
+  if (!shouldWarnBeforeUnload()) return;
+  e.preventDefault();
+  e.returnValue = '';
+});
+
 // ---------------------------------------------------------------------------
 // Keyboard shortcuts
 // ---------------------------------------------------------------------------
@@ -1284,7 +2098,44 @@ const hint = `${modKey}\u23CE`;
 document.getElementById('kbd-append').textContent = hint;
 document.getElementById('kbd-generate').textContent = hint;
 
-loadPatients();
+window.addEventListener('message', async e => {
+  if (!e.data || e.data.type !== 'portal-handoff-open') return;
+  const requestId = e.data.requestId || '';
+  const targetTab = getPreferredTab(e.data.tab);
+  const targetPatientId = e.data.patientId || '';
+  const seedAppendText = (e.data.seedAppendText || '').trim();
+  const seedAppendCategory = e.data.seedAppendCategory || 'Clinical Note';
+  try {
+    await loadPatients();
+    if (targetPatientId) {
+      selectPatient(targetPatientId, { broadcast: false });
+    }
+    switchTab(targetTab);
+    if (requestId && handledPortalSeedRequests.has(requestId)) {
+      postToPortal({ type: 'handoff-open-ack', requestId, patientId: targetPatientId, tab: targetTab });
+      return;
+    }
+    if (seedAppendText && targetTab === 'append') {
+      seedAppendDraftFromPortal(targetPatientId || currentPatient, seedAppendText, seedAppendCategory);
+      if (requestId) handledPortalSeedRequests.add(requestId);
+    }
+    postToPortal({ type: 'handoff-open-ack', requestId, patientId: targetPatientId, tab: targetTab });
+  } catch (err) {}
+});
+
+async function initPage() {
+  const patients = await loadPatients();
+  switchTab(getPreferredTab());
+  const savedPatientId = storageGet(PATIENT_STORAGE);
+  if (!savedPatientId) return;
+  if (!patients.some(p => p.id === savedPatientId)) {
+    storageRemove(PATIENT_STORAGE);
+    return;
+  }
+  selectPatient(savedPatientId, { broadcast: false });
+}
+
+initPage();
 
 // ---------------------------------------------------------------------------
 // Theme sync — listen to portal parent for theme changes

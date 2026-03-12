@@ -2,6 +2,7 @@
 // PHI Remover — drag & drop + file input
 // ---------------------------------------------------------------------------
 let currentResult = null;
+let currentResultText = '';
 let phiFilesVisible = false;
 
 const dropArea = document.getElementById('drop-area');
@@ -59,6 +60,32 @@ async function processFile(file) {
   }
 }
 
+function setPhiResultStatus(message, tone) {
+  const el = document.getElementById('phi-result-status');
+  if (!el) return;
+  if (!message) {
+    el.className = 'consults-status';
+    el.textContent = '';
+    return;
+  }
+  el.className = `consults-status ${tone || 'info'}`;
+  el.textContent = message;
+}
+
+function updatePhiResultActions() {
+  const copyBtn = document.getElementById('phi-copy-btn');
+  const sendBtn = document.getElementById('phi-send-handoff-btn');
+  const hasText = !!currentResultText.trim();
+  const activePatientId = typeof getActivePatientId === 'function' ? getActivePatientId() : '';
+  const activePatientName = typeof getActivePatientDisplayName === 'function' ? getActivePatientDisplayName() : '';
+
+  if (copyBtn) copyBtn.disabled = !hasText;
+  if (sendBtn) {
+    sendBtn.disabled = !hasText || !activePatientId;
+    sendBtn.title = activePatientId ? `Send clean text to Handoff for ${activePatientName || 'active patient'}` : 'Select an active patient first';
+  }
+}
+
 function showResults(data) {
   document.getElementById('phi-processing-state').classList.remove('active');
   document.getElementById('phi-upload-state').style.display = 'none';
@@ -89,7 +116,10 @@ function showResults(data) {
   fetch(data.download_url)
     .then((r) => r.text())
     .then((text) => {
+      currentResultText = text;
       document.getElementById('result-preview').textContent = text;
+      setPhiResultStatus('', '');
+      updatePhiResultActions();
     });
 }
 
@@ -100,12 +130,49 @@ function downloadResult() {
 
 function resetPhi() {
   currentResult = null;
+  currentResultText = '';
   document.getElementById('phi-results-state').classList.remove('active');
   document.getElementById('phi-processing-state').classList.remove('active');
   document.getElementById('phi-upload-state').style.display = 'flex';
   document.getElementById('result-preview').textContent = '';
   document.getElementById('result-summary').innerHTML = '';
   fileInput.value = '';
+  setPhiResultStatus('', '');
+  updatePhiResultActions();
+}
+
+async function copyPhiResultText() {
+  if (!currentResultText.trim()) return;
+  try {
+    await navigator.clipboard.writeText(currentResultText);
+    setPhiResultStatus('De-identified text copied.', 'success');
+  } catch (err) {
+    const preview = document.getElementById('result-preview');
+    if (preview) {
+      const range = document.createRange();
+      range.selectNodeContents(preview);
+      const selection = window.getSelection();
+      selection.removeAllRanges();
+      selection.addRange(range);
+      document.execCommand('copy');
+      selection.removeAllRanges();
+    }
+    setPhiResultStatus('De-identified text copied.', 'success');
+  }
+}
+
+function sendPhiResultToHandoff() {
+  const activePatientId = typeof getActivePatientId === 'function' ? getActivePatientId() : '';
+  if (!currentResultText.trim()) return;
+  if (!activePatientId || typeof openPatientInHandoff !== 'function') {
+    setPhiResultStatus('Select an active patient before sending text to Handoff.', 'error');
+    return;
+  }
+  openPatientInHandoff('append', {
+    seedAppendText: currentResultText,
+    seedAppendCategory: 'Clinical Note',
+  });
+  setPhiResultStatus('Opened Handoff Add Data and queued the de-identified text import.', 'success');
 }
 
 // ---------------------------------------------------------------------------
@@ -169,3 +236,8 @@ async function clearAllPhiFiles() {
 }
 
 loadPhiFiles();
+updatePhiResultActions();
+
+window.addEventListener('patient-context-updated', () => {
+  updatePhiResultActions();
+});
