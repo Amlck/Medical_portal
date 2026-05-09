@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mediport Public Demo</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root { color-scheme: light dark; --accent:#0f766e; --ink:#10201f; --muted:#5c6f6c; --line:#d8e4e1; --bg:#f7fbfa; }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family:'IBM Plex Mono', monospace; background:var(--bg); color:var(--ink); }
+    main { min-height:100vh; display:grid; place-items:center; padding:40px 20px; }
+    .wrap { max-width:920px; width:100%; }
+    h1 { margin:0 0 12px; font-size:clamp(2rem, 6vw, 4.6rem); letter-spacing:0; }
+    p { max-width:720px; color:var(--muted); line-height:1.7; font-size:0.95rem; }
+    .actions { display:flex; gap:12px; flex-wrap:wrap; margin-top:28px; }
+    a { color:inherit; }
+    .button { display:inline-flex; align-items:center; justify-content:center; min-height:42px; padding:0 16px; border:1px solid var(--accent); border-radius:6px; color:#fff; background:var(--accent); text-decoration:none; font-weight:600; font-size:0.82rem; }
+    .button.secondary { color:var(--accent); background:transparent; }
+    .notice { margin-top:34px; padding:14px 16px; border:1px solid var(--line); border-left:4px solid var(--accent); border-radius:6px; background:#fff; font-size:0.78rem; line-height:1.6; color:var(--muted); }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="wrap">
+      <h1>Mediport Demo</h1>
+      <p>A fully static GitHub Pages demo of the clinical portal experience. It uses synthetic patient records, in-memory state, and canned AI responses for handoff, progress, discharge, consult, and de-escalation workflows.</p>
+      <div class="actions">
+        <a class="button" href="./demo/">Open Static Demo</a>
+        <a class="button secondary" href="https://github.com/">View Repository</a>
+      </div>
+      <div class="notice">Public demo safety boundary: no backend, no database, no real AI calls, no file upload processing, and no real patient data. Refreshing the page resets demo edits.</div>
+    </div>
+  </main>
+</body>
+</html>

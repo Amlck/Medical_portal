@@ -1,0 +1,40 @@
+.demo-mode-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10000;
+  min-height: 34px;
+  padding: 9px 18px;
+  background: #0f766e;
+  color: #fff;
+  font: 600 12px/1.35 'IBM Plex Mono', monospace;
+  text-align: center;
+  border-bottom: 1px solid rgba(255,255,255,0.24);
+}
+body.demo-mode .sidebar,
+body:has(.demo-mode-banner) .sidebar {
+  padding-top: 34px;
+}
+body.demo-mode .main,
+body:has(.demo-mode-banner) .main {
+  padding-top: 34px;
+}
+body.demo-handoff-demo {
+  padding-top: 34px;
+}
+.demo-disabled {
+  opacity: 0.58;
+  cursor: not-allowed !important;
+}
+.demo-disabled * {
+  pointer-events: none;
+}
+@media (max-width: 720px) {
+  .demo-mode-banner { font-size: 11px; padding: 8px 10px; }
+  body.demo-mode .sidebar,
+  body.demo-mode .main,
+  body:has(.demo-mode-banner) .sidebar,
+  body:has(.demo-mode-banner) .main,
+  body.demo-handoff-demo { padding-top: 46px; }
+}

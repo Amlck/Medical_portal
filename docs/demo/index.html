@@ -1,0 +1,1629 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <script>
+    // Apply theme immediately to prevent flash of wrong theme
+    (function() {
+      var t = localStorage.getItem('medical-portal-theme') || 'light';
+      document.documentElement.setAttribute('data-theme', t);
+    })();
+  </script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mediport Static Demo</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="static/css/portal.css?v=demo" />
+  <link rel="stylesheet" href="static/css/demo-mode.css">
+</head>
+<body>
+
+<!-- Sidebar -->
+<div class="sidebar" id="sidebar">
+  <div class="sidebar-brand">
+    <button class="sidebar-toggle" onclick="toggleSidebar()" title="Toggle sidebar">&#9776;</button>
+    <div class="sidebar-brand-text">
+      <h1>MEDIPORT DEMO</h1>
+      <span>Synthetic data only</span>
+    </div>
+  </div>
+
+  <div class="nav">
+    <button class="nav-item active" onclick="switchView('handoff')" data-view="handoff" title="Handoff Tool">
+      <span class="nav-icon">&#128203;</span>
+      <span class="nav-label">Handoff Tool</span>
+      <span class="status-dot" id="dot-handoff"></span>
+    </button>
+    <button class="nav-item" onclick="switchView('admissions')" data-view="admissions" title="Admissions">
+      <span class="nav-icon">&#128221;</span>
+      <span class="nav-label">Admissions</span>
+      <span class="status-dot" id="dot-admissions"></span>
+    </button>
+    <button class="nav-item" onclick="switchView('phi')" data-view="phi" title="PHI Remover">
+      <span class="nav-icon">&#128274;</span>
+      <span class="nav-label">PHI Remover</span>
+    </button>
+    <button class="nav-item" onclick="switchView('calculator')" data-view="calculator" title="Clinical Calculator (Alt+4)">
+      <span class="nav-icon">&#129518;</span>
+      <span class="nav-label">Calculator</span>
+    </button>
+    <button class="nav-item" onclick="switchView('ward')" data-view="ward" title="Ward Board (Alt+5)">
+      <span class="nav-icon">&#128202;</span>
+      <span class="nav-label">Ward Board</span>
+    </button>
+    <button class="nav-item" onclick="switchView('todos')" data-view="todos" title="Todos">
+      <span class="nav-icon">&#9989;</span>
+      <span class="nav-label">Todos</span>
+      <span class="nav-badge" id="todos-nav-badge" style="display:none;">0</span>
+    </button>
+    <button class="nav-item" onclick="openPatientContextWorkspace()" data-view="patient-context" title="Patient Context Workspace (Alt+9)">
+      <span class="nav-icon">&#128200;</span>
+      <span class="nav-label">Patient Context</span>
+      <span class="nav-badge" id="patient-context-nav-badge" style="display:none;">0</span>
+    </button>
+    <button class="nav-item" onclick="switchView('abx')" data-view="abx" title="Antibiotic Guide (Alt+6)">
+      <span class="nav-icon">&#128138;</span>
+      <span class="nav-label">Antibiotics</span>
+    </button>
+    <button class="nav-item" onclick="switchView('drugs')" data-view="drugs" title="Drug Reference (Alt+7)">
+      <span class="nav-icon">&#128214;</span>
+      <span class="nav-label">Medication</span>
+    </button>
+    <button class="nav-item" onclick="switchView('rules')" data-view="rules" title="Rules">
+      <span class="nav-icon">&#128737;</span>
+      <span class="nav-label">Rules</span>
+    </button>
+    <button class="nav-item" onclick="switchView('consults')" data-view="consults" title="Consults (Alt+8)">
+      <span class="nav-icon">&#128172;</span>
+      <span class="nav-label">Consults</span>
+    </button>
+    <button class="nav-item" onclick="switchView('import')" data-view="import" title="Import &amp; Parse">
+      <span class="nav-icon">&#128229;</span>
+      <span class="nav-label">Import &amp; Parse</span>
+    </button>
+  </div>
+
+  <!-- Music Player -->
+  <div class="music-player" id="music-player">
+    <!-- Track list panel (shown/hidden by ☰ button) -->
+    <div class="music-list-panel" id="music-list-panel" style="display:none">
+      <div class="music-empty" id="music-list-empty">Loading...</div>
+    </div>
+    <!-- Now-playing row -->
+    <div class="music-top">
+      <span style="font-size:0.78rem;flex-shrink:0;line-height:1">🎵</span>
+      <span class="music-track-name idle" id="music-track-name">No music</span>
+      <button class="music-btn" id="music-list-btn" onclick="toggleMusicList()" title="Track list">☰</button>
+    </div>
+    <!-- Seek bar (hidden until a track is loaded) -->
+    <input type="range" class="music-progress" id="music-progress" min="0" max="1" step="0.001" value="0" style="display:none">
+    <!-- Controls -->
+    <div class="music-controls">
+      <button class="music-btn" onclick="prevTrack()" title="Previous">⏮</button>
+      <button class="music-btn" id="music-play-btn" onclick="togglePlay()" title="Play / Pause">▶</button>
+      <button class="music-btn" onclick="nextTrack()" title="Next">⏭</button>
+      <button class="music-btn" id="music-shuffle-btn" onclick="toggleShuffle()" title="Shuffle">⇄</button>
+      <button class="music-btn" id="music-loop-btn" onclick="toggleLoop()" title="Loop">↻</button>
+      <div class="music-vol-wrap">
+        <span style="font-size:0.65rem;color:var(--text-dim);line-height:1">🔊</span>
+        <input type="range" class="music-vol" id="music-vol" min="0" max="1" step="0.02" value="0.7" oninput="setMusicVolume(this.value)" title="Volume">
+      </div>
+    </div>
+    <audio id="music-audio" preload="metadata"></audio>
+  </div>
+
+  <div class="sidebar-footer">
+    <div class="sidebar-patient-picker">
+      <label class="sidebar-patient-label" for="sidebar-patient-select">Patient</label>
+      <div class="sidebar-patient-row">
+        <select id="sidebar-patient-select" onchange="handleSidebarPatientSelect(this.value)">
+          <option value="">Select patient</option>
+        </select>
+        <button class="sidebar-patient-open-btn" onclick="openSidebarSelectedPatient()" title="Open in workspace">↗</button>
+        <button class="sidebar-patient-open-btn" id="patient-context-toggle" onclick="togglePatientContextDrawer()" title="Quick patient context">
+          <span aria-hidden="true">&#128065;</span>
+          <span class="sidebar-patient-open-badge" id="patient-context-toggle-badge" style="display:none;">0</span>
+        </button>
+      </div>
+      <div class="sidebar-patient-meta" id="sidebar-patient-meta">No patient selected.</div>
+    </div>
+    <div class="sidebar-footer-controls">
+      <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()" title="Toggle light/dark theme">
+        <span id="theme-icon">&#9788;</span>
+        <span class="theme-label" id="theme-label">Light</span>
+      </button>
+      <button class="settings-toggle" id="settings-toggle" onclick="openSettings()" title="Settings">
+        <span>&#9881;</span>
+        <span class="settings-label">Settings</span>
+      </button>
+    </div>
+    Medical Portal v1.0 &middot; Static demo
+  </div>
+</div>
+
+<!-- Main content area -->
+<div class="main">
+<div id="views-wrapper">
+<!-- Handoff Tool -->
+<div class="view active" id="view-handoff">
+  <iframe id="iframe-handoff"></iframe>
+  <div class="offline-overlay" id="offline-handoff" style="display:flex;">
+    <div class="spinner"></div>
+    <span>Starting Handoff Tool...</span>
+  </div>
+</div>
+
+<!-- Admissions -->
+<div class="view" id="view-admissions">
+  <iframe id="iframe-admissions" allow="clipboard-read; clipboard-write; microphone"></iframe>
+  <div class="offline-overlay" id="offline-admissions" style="display:flex;">
+    <div class="spinner"></div>
+    <span>Starting Admissions...</span>
+  </div>
+</div>
+
+<!-- PHI Remover -->
+<div class="view" id="view-phi">
+  <div class="phi-panel">
+    <div class="phi-header">
+      <h2>PHI Remover</h2>
+      <p>Upload a medical PDF to de-identify. Removes names, IDs, dates, phone numbers, addresses, and other protected health information using HIPAA Safe Harbor patterns.</p>
+      <div style="margin-top:8px; display:flex; gap:0.5rem; align-items:center;">
+        <button class="btn-secondary" onclick="togglePhiFiles()" id="phi-files-toggle" style="font-size:0.6rem; padding:0.3rem 0.6rem;">Saved Files <span id="phi-files-count"></span></button>
+        <button class="btn-secondary" onclick="clearAllPhiFiles()" id="phi-clear-all" style="font-size:0.6rem; padding:0.3rem 0.6rem; color:var(--red); border-color:var(--red); display:none;">Clear All</button>
+      </div>
+    </div>
+
+    <!-- PHI file manager -->
+    <div id="phi-file-manager" style="display:none; border-bottom:1px solid var(--border); max-height:200px; overflow-y:auto; background:var(--surface);">
+      <div id="phi-file-list" style="padding:0.5rem;"></div>
+    </div>
+
+    <div class="phi-body">
+      <!-- Upload state -->
+      <div class="phi-upload-zone" id="phi-upload-state">
+        <div class="drop-area" id="drop-area" onclick="document.getElementById('phi-file-input').click()">
+          <div class="drop-icon">&#128196;</div>
+          <div class="drop-text">Drop a PDF here, or click to browse</div>
+          <div class="drop-hint">Max 50 MB &middot; PDF files only</div>
+        </div>
+        <input type="file" id="phi-file-input" accept=".pdf" />
+        <div class="phi-options">
+          <label>
+            <input type="checkbox" id="phi-keep-dates" checked />
+            Keep dates (DOB, admission/discharge dates)
+          </label>
+        </div>
+      </div>
+
+      <!-- Processing state -->
+      <div class="phi-processing" id="phi-processing-state">
+        <div class="spinner"></div>
+        <span style="font-size:0.75rem; color:var(--text-dim);">De-identifying document...</span>
+        <span style="font-size:0.6rem; color:var(--text-dim); opacity:0.6;" id="phi-proc-file"></span>
+      </div>
+
+      <!-- Results state -->
+      <div class="phi-results" id="phi-results-state">
+        <div class="result-header">
+          <span class="result-title" id="result-title">De-identification Complete</span>
+          <span class="result-meta" id="result-meta"></span>
+          <div class="result-actions">
+            <button class="btn-secondary" id="phi-copy-btn" onclick="copyPhiResultText()" disabled>Copy Clean Text</button>
+            <button class="btn-primary" id="phi-send-handoff-btn" onclick="sendPhiResultToHandoff()" disabled>Send to Handoff</button>
+            <button class="btn-green" onclick="downloadResult()">Download .txt</button>
+            <button class="btn-secondary" onclick="resetPhi()">Process Another</button>
+          </div>
+        </div>
+        <div class="result-body">
+          <div class="result-summary" id="result-summary"></div>
+          <div class="result-content">
+            <div class="consults-status" id="phi-result-status"></div>
+            <div class="result-preview" id="result-preview"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Clinical Calculator -->
+<div class="view" id="view-calculator">
+  <div class="calc-panel">
+    <div class="calc-header">
+      <h2>Clinical Calculator</h2>
+      <p>Common bedside scoring tools. All calculations run locally — no API calls needed.</p>
+      <div class="calc-patient-loader">
+        <label style="font-size:0.65rem;color:var(--text-dim);">Load patient data:</label>
+        <select id="calc-patient-select" onchange="loadPatientIntoCalc(this.value)" style="font-family:var(--mono);font-size:0.65rem;padding:0.25rem 0.4rem;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--text);max-width:220px;">
+          <option value="">— Select patient —</option>
+        </select>
+        <span id="calc-patient-status" style="font-size:0.6rem;color:var(--green);display:none;"></span>
+      </div>
+      <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;margin-top:0.25rem;">
+        <button id="copy-all-results-btn" class="btn-secondary" onclick="copyAllResults(this)" style="font-size:0.62rem;padding:0.25rem 0.8rem;" title="Copy all non-empty calculator results to clipboard">⧉ Copy All Results</button>
+        <button class="btn-secondary" onclick="toggleLabTrends()" id="lab-trends-toggle-btn" style="font-size:0.62rem;padding:0.25rem 0.8rem;" title="Open full patient context workspace">&#128200; Full Context</button>
+      </div>
+      <div class="calc-lab-paste">
+        <button class="calc-lab-paste-toggle" onclick="toggleLabPaste()">
+          <span id="lab-paste-arrow">&#9654;</span> Paste Demo Lab Data
+        </button>
+        <div class="calc-lab-paste-area" id="lab-paste-area">
+          <div contenteditable="true" class="calc-lab-paste-box" id="lab-paste-box" placeholder="Paste synthetic lab text here"></div>
+          <div style="display:flex;gap:0.5rem;margin-top:0.4rem;align-items:center;">
+            <button class="btn-primary" onclick="parseLabPaste()" style="font-size:0.62rem;padding:0.25rem 0.7rem;">Parse &amp; Fill</button>
+            <button class="btn-secondary" onclick="clearLabPaste()" style="font-size:0.62rem;padding:0.25rem 0.7rem;">Clear</button>
+            <span style="font-size:0.58rem;color:var(--text-dim);">Supports HTML table paste (best) and plain text</span>
+          </div>
+          <div class="calc-lab-parsed" id="lab-parsed-status"></div>
+        </div>
+      </div>
+    </div>
+    <!-- Category filter tabs -->
+    <div class="calc-cats" id="calc-cats">
+      <button class="calc-cat-btn active" onclick="switchCalcCat('all')">All<span class="cat-count">(29)</span></button>
+      <button class="calc-cat-btn" onclick="switchCalcCat('general')">General<span class="cat-count">(3)</span></button>
+      <button class="calc-cat-btn" onclick="switchCalcCat('renal')">Renal<span class="cat-count">(4)</span></button>
+      <button class="calc-cat-btn" onclick="switchCalcCat('cardiac')">Cardiac<span class="cat-count">(6)</span></button>
+      <button class="calc-cat-btn" onclick="switchCalcCat('pulmonary')">Pulmonary<span class="cat-count">(2)</span></button>
+      <button class="calc-cat-btn" onclick="switchCalcCat('hepatic')">Hepatic<span class="cat-count">(2)</span></button>
+      <button class="calc-cat-btn" onclick="switchCalcCat('metabolic')">Metabolic<span class="cat-count">(3)</span></button>
+      <button class="calc-cat-btn" onclick="switchCalcCat('icu')">ICU<span class="cat-count">(3)</span></button>
+      <button class="calc-cat-btn" onclick="switchCalcCat('ward')">Ward Safety<span class="cat-count">(6)</span></button>
+      <button class="calc-cat-btn" onclick="switchCalcCat('dosing')">Dosing<span class="cat-count">(1)</span></button>
+    </div>
+    <div class="calc-body">
+
+      <!-- ==================== GENERAL ==================== -->
+      <div class="calc-cat-section active" data-cat="general">
+        <div class="calc-cat-title">General</div>
+
+        <div class="calc-card" data-calc="bmi">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <h3>BMI</h3>
+            <button class="calc-clear-btn" onclick="clearCalc('bmi')" title="Clear">&#10005;</button>
+          </div>
+          <div class="calc-desc">Body Mass Index with WHO classification</div>
+          <div class="calc-row"><label>Weight (kg)</label><input type="number" id="bmi-wt" step="0.1" min="1" oninput="calcBMI()"></div>
+          <div class="calc-row"><label>Height (cm)</label><input type="number" id="bmi-ht" step="0.1" min="50" oninput="calcBMI()"></div>
+          <div class="calc-result" id="bmi-result">—</div>
+        </div>
+
+        <div class="calc-card" data-calc="gcs">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <h3>Glasgow Coma Scale</h3>
+            <button class="calc-clear-btn" onclick="clearCalc('gcs')" title="Clear">&#10005;</button>
+          </div>
+          <div class="calc-desc">Level of consciousness assessment</div>
+          <div class="calc-row"><label>Eye Opening</label><select id="gcs-eye" onchange="calcGCS()"><option value="4">Spontaneous (4)</option><option value="3">To voice (3)</option><option value="2">To pain (2)</option><option value="1">None (1)</option></select></div>
+          <div class="calc-row"><label>Verbal</label><select id="gcs-verbal" onchange="calcGCS()"><option value="5">Oriented (5)</option><option value="4">Confused (4)</option><option value="3">Inappropriate (3)</option><option value="2">Incomprehensible (2)</option><option value="1">None (1)</option></select></div>
+          <div class="calc-row"><label>Motor</label><select id="gcs-motor" onchange="calcGCS()"><option value="6">Obeys commands (6)</option><option value="5">Localizes pain (5)</option><option value="4">Withdraws (4)</option><option value="3">Abnormal flexion (3)</option><option value="2">Extension (2)</option><option value="1">None (1)</option></select></div>
+          <div class="calc-result" id="gcs-result">—</div>
+        </div>
+
+        <div class="calc-card" data-calc="map">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <h3>Mean Arterial Pressure</h3>
+            <button class="calc-clear-btn" onclick="clearCalc('map')" title="Clear">&#10005;</button>
+          </div>
+          <div class="calc-desc">MAP = DBP + ⅓(SBP − DBP)</div>
+          <div class="calc-row"><label>SBP (mmHg)</label><input type="number" id="map-sbp" step="1" oninput="calcMAP()"></div>
+          <div class="calc-row"><label>DBP (mmHg)</label><input type="number" id="map-dbp" step="1" oninput="calcMAP()"></div>
+          <div class="calc-result" id="map-result">—</div>
+        </div>
+      </div>
+
+      <!-- ==================== RENAL ==================== -->
+      <div class="calc-cat-section active" data-cat="renal">
+        <div class="calc-cat-title">Renal</div>
+
+        <div class="calc-card" data-calc="crcl">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <h3>CrCl (Cockcroft-Gault)</h3>
+            <button class="calc-clear-btn" onclick="clearCalc('crcl')" title="Clear">&#10005;</button>
+          </div>
+          <div class="calc-desc">Creatinine clearance for drug dosing</div>
+          <div class="calc-row"><label>Creatinine (mg/dL)</label><input type="number" id="crcl-cr" step="0.01" min="0" oninput="calcCrCl()"></div>
+          <div class="calc-row"><label>Age (years)</label><input type="number" id="crcl-age" min="18" max="120" oninput="calcCrCl()"></div>
+          <div class="calc-row"><label>Weight (kg)</label><input type="number" id="crcl-wt" step="0.1" min="20" oninput="calcCrCl()"></div>
+          <div class="calc-row"><label>Sex</label><select id="crcl-sex" onchange="calcCrCl()"><option value="M">Male</option><option value="F">Female</option></select></div>
+          <div class="calc-result" id="crcl-result">—</div>
+        </div>
+
+        <div class="calc-card" data-calc="egfr">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <h3>eGFR (CKD-EPI 2021)</h3>
+            <button class="calc-clear-btn" onclick="clearCalc('egfr')" title="Clear">&#10005;</button>
+          </div>
+          <div class="calc-desc">Estimated GFR — race-free equation</div>
+          <div class="calc-row"><label>Creatinine (mg/dL)</label><input type="number" id="egfr-cr" step="0.01" min="0" oninput="calcEGFR()"></div>
+          <div class="calc-row"><label>Age (years)</label><input type="number" id="egfr-age" min="18" max="120" oninput="calcEGFR()"></div>
+          <div class="calc-row"><label>Sex</label><select id="egfr-sex" onchange="calcEGFR()"><option value="M">Male</option><option value="F">Female</option></select></div>
+          <div class="calc-result" id="egfr-result">—</div>
+        </div>
+
+        <div class="calc-card" data-calc="fena">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <h3>FENa</h3>
+            <button class="calc-clear-btn" onclick="clearCalc('fena')" title="Clear">&#10005;</button>
+          </div>
+          <div class="calc-desc">Fractional excretion of sodium — prerenal vs intrinsic AKI</div>
+          <div class="calc-row"><label>Serum Na (mEq/L)</label><input type="number" id="fena-sna" step="1" oninput="calcFENa()"></div>
+          <div class="calc-row"><label>Serum Cr (mg/dL)</label><input type="number" id="fena-scr" step="0.01" oninput="calcFENa()"></div>
+          <div class="calc-row"><label>Urine Na (mEq/L)</label><input type="number" id="fena-una" step="1" oninput="calcFENa()"></div>
+          <div class="calc-row"><label>Urine Cr (mg/dL)</label><input type="number" id="fena-ucr" step="0.1" oninput="calcFENa()"></div>
+          <div class="calc-result" id="fena-result">—</div>
+        </div>
+
+        <div class="calc-card" data-calc="osm">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <h3>Serum Osmolality</h3>
+            <button class="calc-clear-btn" onclick="clearCalc('osm')" title="Clear">&#10005;</button>
+          </div>
+          <div class="calc-desc">Calculated osmolality &amp; osmolar gap</div>
+          <div class="calc-row"><label>Na (mEq/L)</label><input type="number" id="osm-na" step="1" oninput="calcOsm()"></div>
+          <div class="calc-row"><label>Glucose (mg/dL)</label><input type="number" id="osm-glu" step="1" oninput="calcOsm()"></div>
+          <div class="calc-row"><label>BUN (mg/dL)</label><input type="number" id="osm-bun" step="0.1" oninput="calcOsm()"></div>
+          <div class="calc-row"><label>Measured Osm (optional)</label><input type="number" id="osm-meas" step="1" oninput="calcOsm()"></div>
+          <div class="calc-result" id="osm-result">—</div>
+        </div>
+      </div>
+
+      <!-- ==================== CARDIAC ==================== -->
+      <div class="calc-cat-section active" data-cat="cardiac">
+        <div class="calc-cat-title">Cardiac</div>
+
+        <div class="calc-card" data-calc="chads">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <h3>CHA₂DS₂-VASc</h3>
+            <button class="calc-clear-btn" onclick="clearCalc('chads')" title="Clear">&#10005;</button>
+          </div>
+          <div class="calc-desc">Stroke risk in atrial fibrillation</div>
+          <div class="calc-row"><label>CHF</label><select id="chads-chf" onchange="calcCHADS()"><option value="0">No</option><option value="1">Yes (+1)</option></select></div>
+          <div class="calc-row"><label>Hypertension</label><select id="chads-htn" onchange="calcCHADS()"><option value="0">No</option><option value="1">Yes (+1)</option></select></div>
+          <div class="calc-row"><label>Age</label><select id="chads-age" onchange="calcCHADS()"><option value="0">&lt; 65</option><option value="1">65-74 (+1)</option><option value="2">≥ 75 (+2)</option></select></div>
+          <div class="calc-row"><label>Diabetes</label><select id="chads-dm" onchange="calcCHADS()"><option value="0">No</option><option value="1">Yes (+1)</option></select></div>
+          <div class="calc-row"><label>Stroke/TIA/TE</label><select id="chads-stroke" onchange="calcCHADS()"><option value="0">No</option><option value="2">Yes (+2)</option></select></div>
+          <div class="calc-row"><label>Vascular Dz</label><select id="chads-vasc" onchange="calcCHADS()"><option value="0">No</option><option value="1">Yes (+1)</option></select></div>
+          <div class="calc-row"><label>Sex</label><select id="chads-sex" onchange="calcCHADS()"><option value="0">Male</option><option value="1">Female (+1)</option></select></div>
+          <div class="calc-result" id="chads-result">—</div>
+        </div>
+
+        <div class="calc-card" data-calc="hasbled">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <h3>HAS-BLED</h3>
+            <button class="calc-clear-btn" onclick="clearCalc('hasbled')" title="Clear">&#10005;</button>
+          </div>
+          <div class="calc-desc">Bleeding risk on anticoagulation</div>
+          <div class="calc-row"><label>Hypertension (SBP&gt;160)</label><select id="hasbled-htn" onchange="calcHASBLED()"><option value="0">No</option><option value="1">Yes (+1)</option></select></div>
+          <div class="calc-row"><label>Renal disease</label><select id="hasbled-renal" onchange="calcHASBLED()"><option value="0">No</option><option value="1">Yes (+1)</option></select></div>
+          <div class="calc-row"><label>Liver disease</label><select id="hasbled-liver" onchange="calcHASBLED()"><option value="0">No</option><option value="1">Yes (+1)</option></select></div>
+          <div class="calc-row"><label>Stroke history</label><select id="hasbled-stroke" onchange="calcHASBLED()"><option value="0">No</option><option value="1">Yes (+1)</option></select></div>
+          <div class="calc-row"><label>Prior bleed/predisposition</label><select id="hasbled-bleed" onchange="calcHASBLED()"><option value="0">No</option><option value="1">Yes (+1)</option></select></div>
+          <div class="calc-row"><label>Labile INR</label><select id="hasbled-inr" onchange="calcHASBLED()"><option value="0">No</option><option value="1">Yes (+1)</option></select></div>
+          <div class="calc-row"><label>Age &gt; 65</label><select id="hasbled-age" onchange="calcHASBLED()"><option value="0">No</option><option value="1">Yes (+1)</option></select></div>
+          <div class="calc-row"><label>Drugs (antiplatelet/NSAID)</label><select id="hasbled-drugs" onchange="calcHASBLED()"><option value="0">No</option><option value="1">Yes (+1)</option></select></div>
+          <div class="calc-row"><label>Alcohol (≥8 drinks/wk)</label><select id="hasbled-etoh" onchange="calcHASBLED()"><option value="0">No</option><option value="1">Yes (+1)</option></select></div>
+          <div class="calc-result" id="hasbled-result">—</div>
+        </div>
+
+        <div class="calc-card" data-calc="qtc">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <h3>QTc</h3>
+            <button class="calc-clear-btn" onclick="clearCalc('qtc')" title="Clear">&#10005;</button>
+          </div>
+          <div class="calc-desc">Corrected QT interval (Bazett &amp; Fridericia)</div>
+          <div class="calc-row"><label>QT interval (ms)</label><input type="number" id="qtc-qt" step="1" oninput="calcQTc()"></div>
+          <div class="calc-row"><label>Heart rate (bpm)</label><input type="number" id="qtc-hr" step="1" oninput="calcQTc()"></div>
+          <div class="calc-result" id="qtc-result">—</div>
+        </div>
+
+        <div class="calc-card" data-calc="ekg">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <h3>EKG Interpreter</h3>
+          </div>
+          <div class="ekg-wizard-launch-card">
+            <p class="ekg-wizard-launch-desc">Step-by-step systematic interpretation — rate, rhythm, intervals, axis, chamber, ST-T. One question at a time with built-in clinical references.</p>
+            <button class="ekg-wizard-launch-btn" onclick="openEkgWizard()">
+              &#9654; Open EKG Wizard
+            </button>
+          </div>
+        </div>
+
+        <div class="calc-card" data-calc="wells">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <h3>Wells Score (DVT)</h3>
+            <button class="calc-clear-btn" onclick="clearCalc('wells')" title="Clear">&#10005;</button>
+          </div>
+          <div class="calc-desc">Probability of deep vein thrombosis</div>
+          <div class="calc-row"><label>Active cancer</label><select id="wells-cancer" onchange="calcWells()"><option value="0">No</option><option value="1">Yes (+1)</option></select></div>
+          <div class="calc-row"><label>Paralysis/immob.</label><select id="wells-paral" onchange="calcWells()"><option value="0">No</option><option value="1">Yes (+1)</option></select></div>
+          <div class="calc-row"><label>Bedridden &gt;3d / Surg &lt;12w</label><select id="wells-bed" onchange="calcWells()"><option value="0">No</option><option value="1">Yes (+1)</option></select></div>
+          <div class="calc-row"><label>Tenderness along vein</label><select id="wells-tend" onchange="calcWells()"><option value="0">No</option><option value="1">Yes (+1)</option></select></div>
+          <div class="calc-row"><label>Entire leg swollen</label><select id="wells-swell" onchange="calcWells()"><option value="0">No</option><option value="1">Yes (+1)</option></select></div>
+          <div class="calc-row"><label>Calf &gt;3cm vs other</label><select id="wells-calf" onchange="calcWells()"><option value="0">No</option><option value="1">Yes (+1)</option></select></div>
+          <div class="calc-row"><label>Pitting edema</label><select id="wells-edema" onchange="calcWells()"><option value="0">No</option><option value="1">Yes (+1)</option></select></div>
+          <div class="calc-row"><label>Collateral veins</label><select id="wells-coll" onchange="calcWells()"><option value="0">No</option><option value="1">Yes (+1)</option></select></div>
+          <div class="calc-row"><label>Alt diagnosis likely</label><select id="wells-alt" onchange="calcWells()"><option value="0">No</option><option value="-2">Yes (−2)</option></select></div>
+          <div class="calc-result" id="wells-result">—</div>
+        </div>
+
+        <div class="calc-card" data-calc="wellspe">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <h3>Wells Score (PE)</h3>
+            <button class="calc-clear-btn" onclick="clearCalc('wellspe')" title="Clear">&#10005;</button>
+          </div>
+          <div class="calc-desc">Probability of pulmonary embolism (≤ 4 unlikely, &gt; 4 likely)</div>
+          <div class="calc-row"><label>Clinical signs/symptoms of DVT</label><select id="wellspe-dvt" onchange="calcWellsPE()"><option value="0">No</option><option value="3">Yes (+3)</option></select></div>
+          <div class="calc-row"><label>Alternative Dx less likely than PE</label><select id="wellspe-alt" onchange="calcWellsPE()"><option value="0">No</option><option value="3">Yes (+3)</option></select></div>
+          <div class="calc-row"><label>HR &gt; 100 bpm</label><select id="wellspe-hr" onchange="calcWellsPE()"><option value="0">No</option><option value="1.5">Yes (+1.5)</option></select></div>
+          <div class="calc-row"><label>Immobilization ≥ 3d or surgery within 4 weeks</label><select id="wellspe-immob" onchange="calcWellsPE()"><option value="0">No</option><option value="1.5">Yes (+1.5)</option></select></div>
+          <div class="calc-row"><label>Prior DVT/PE</label><select id="wellspe-prior" onchange="calcWellsPE()"><option value="0">No</option><option value="1.5">Yes (+1.5)</option></select></div>
+          <div class="calc-row"><label>Hemoptysis</label><select id="wellspe-hemo" onchange="calcWellsPE()"><option value="0">No</option><option value="1">Yes (+1)</option></select></div>
+          <div class="calc-row"><label>Malignancy (on treatment / last 6 mo)</label><select id="wellspe-malig" onchange="calcWellsPE()"><option value="0">No</option><option value="1">Yes (+1)</option></select></div>
+          <div class="calc-result" id="wellspe-result">—</div>
+        </div>
+      </div>
+
+      <!-- ==================== PULMONARY ==================== -->
+      <div class="calc-cat-section active" data-cat="pulmonary">
+        <div class="calc-cat-title">Pulmonary</div>
+
+        <div class="calc-card" data-calc="aa">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <h3>A-a Gradient</h3>
+            <button class="calc-clear-btn" onclick="clearCalc('aa')" title="Clear">&#10005;</button>
+          </div>
+          <div class="calc-desc">Alveolar-arterial oxygen gradient</div>
+          <div class="calc-row"><label>FiO₂ (%)</label><input type="number" id="aa-fio2" step="1" value="21" min="21" max="100" oninput="calcAaGrad()"></div>
+          <div class="calc-row"><label>PaO₂ (mmHg)</label><input type="number" id="aa-pao2" step="1" oninput="calcAaGrad()"></div>
+          <div class="calc-row"><label>PaCO₂ (mmHg)</label><input type="number" id="aa-paco2" step="1" oninput="calcAaGrad()"></div>
+          <div class="calc-row"><label>Age (years)</label><input type="number" id="aa-age" step="1" oninput="calcAaGrad()"></div>
+          <div class="calc-result" id="aa-result">—</div>
+        </div>
+
+        <div class="calc-card" data-calc="curb">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <h3>CURB-65</h3>
+            <button class="calc-clear-btn" onclick="clearCalc('curb')" title="Clear">&#10005;</button>
+          </div>
+          <div class="calc-desc">Pneumonia severity assessment</div>
+          <div class="calc-row"><label>Confusion</label><select id="curb-conf" onchange="calcCURB()"><option value="0">No</option><option value="1">Yes (+1)</option></select></div>
+          <div class="calc-row"><label>BUN &gt; 19 mg/dL</label><select id="curb-bun" onchange="calcCURB()"><option value="0">No</option><option value="1">Yes (+1)</option></select></div>
+          <div class="calc-row"><label>RR ≥ 30</label><select id="curb-rr" onchange="calcCURB()"><option value="0">No</option><option value="1">Yes (+1)</option></select></div>
+          <div class="calc-row"><label>BP: SBP&lt;90 or DBP≤60</label><select id="curb-bp" onchange="calcCURB()"><option value="0">No</option><option value="1">Yes (+1)</option></select></div>
+          <div class="calc-row"><label>Age ≥ 65</label><select id="curb-age" onchange="calcCURB()"><option value="0">No</option><option value="1">Yes (+1)</option></select></div>
+          <div class="calc-result" id="curb-result">—</div>
+        </div>
+      </div>
+
+      <!-- ==================== HEPATIC ==================== -->
+      <div class="calc-cat-section active" data-cat="hepatic">
+        <div class="calc-cat-title">Hepatic</div>
+
+        <div class="calc-card" data-calc="childpugh">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <h3>Child-Pugh Score</h3>
+            <button class="calc-clear-btn" onclick="clearCalc('childpugh')" title="Clear">&#10005;</button>
+          </div>
+          <div class="calc-desc">Cirrhosis severity classification</div>
+          <div class="calc-row"><label>Bilirubin (mg/dL)</label><select id="cp-bili" onchange="calcChildPugh()"><option value="1">&lt; 2</option><option value="2">2-3</option><option value="3">&gt; 3</option></select></div>
+          <div class="calc-row"><label>Albumin (g/dL)</label><select id="cp-alb" onchange="calcChildPugh()"><option value="1">&gt; 3.5</option><option value="2">2.8-3.5</option><option value="3">&lt; 2.8</option></select></div>
+          <div class="calc-row"><label>INR</label><select id="cp-inr" onchange="calcChildPugh()"><option value="1">&lt; 1.7</option><option value="2">1.7-2.3</option><option value="3">&gt; 2.3</option></select></div>
+          <div class="calc-row"><label>Ascites</label><select id="cp-ascites" onchange="calcChildPugh()"><option value="1">None</option><option value="2">Mild / controlled</option><option value="3">Moderate-severe</option></select></div>
+          <div class="calc-row"><label>Encephalopathy</label><select id="cp-enceph" onchange="calcChildPugh()"><option value="1">None</option><option value="2">Grade 1-2</option><option value="3">Grade 3-4</option></select></div>
+          <div class="calc-result" id="childpugh-result">—</div>
+        </div>
+
+        <div class="calc-card" data-calc="meld">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <h3>MELD-Na Score</h3>
+            <button class="calc-clear-btn" onclick="clearCalc('meld')" title="Clear">&#10005;</button>
+          </div>
+          <div class="calc-desc">Model for End-stage Liver Disease</div>
+          <div class="calc-row"><label>Bilirubin (mg/dL)</label><input type="number" id="meld-bili" step="0.1" min="0" oninput="calcMELD()"></div>
+          <div class="calc-row"><label>Creatinine (mg/dL)</label><input type="number" id="meld-cr" step="0.01" min="0" oninput="calcMELD()"></div>
+          <div class="calc-row"><label>INR</label><input type="number" id="meld-inr" step="0.01" min="0" oninput="calcMELD()"></div>
+          <div class="calc-row"><label>Na (mEq/L)</label><input type="number" id="meld-na" step="1" oninput="calcMELD()"></div>
+          <div class="calc-row"><label>On Dialysis</label><select id="meld-dialysis" onchange="calcMELD()"><option value="0">No</option><option value="1">Yes</option></select></div>
+          <div class="calc-result" id="meld-result">—</div>
+        </div>
+      </div>
+
+      <!-- ==================== METABOLIC ==================== -->
+      <div class="calc-cat-section active" data-cat="metabolic">
+        <div class="calc-cat-title">Metabolic</div>
+
+        <div class="calc-card" data-calc="ag">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <h3>Anion Gap</h3>
+            <button class="calc-clear-btn" onclick="clearCalc('ag')" title="Clear">&#10005;</button>
+          </div>
+          <div class="calc-desc">With albumin-corrected AG &amp; delta/delta</div>
+          <div class="calc-row"><label>Na (mEq/L)</label><input type="number" id="ag-na" step="1" oninput="calcAG()"></div>
+          <div class="calc-row"><label>Cl (mEq/L)</label><input type="number" id="ag-cl" step="1" oninput="calcAG()"></div>
+          <div class="calc-row"><label>HCO₃ (mEq/L)</label><input type="number" id="ag-hco3" step="1" oninput="calcAG()"></div>
+          <div class="calc-row"><label>Albumin (g/dL)</label><input type="number" id="ag-alb" step="0.1" value="4.0" oninput="calcAG()"></div>
+          <div class="calc-result" id="ag-result">—</div>
+        </div>
+
+        <div class="calc-card" data-calc="ca">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <h3>Corrected Calcium</h3>
+            <button class="calc-clear-btn" onclick="clearCalc('ca')" title="Clear">&#10005;</button>
+          </div>
+          <div class="calc-desc">Adjusted for albumin (Payne formula)</div>
+          <div class="calc-row"><label>Total Ca (mg/dL)</label><input type="number" id="ca-total" step="0.1" min="0" oninput="calcCorrCa()"></div>
+          <div class="calc-row"><label>Albumin (g/dL)</label><input type="number" id="ca-alb" step="0.1" min="0" oninput="calcCorrCa()"></div>
+          <div class="calc-result" id="ca-result">—</div>
+        </div>
+
+        <div class="calc-card hypona-card" data-calc="hypona">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <h3>Hyponatremia Helper</h3>
+            <button class="calc-clear-btn" onclick="clearCalc('hypona')" title="Clear">&#10005;</button>
+          </div>
+          <div class="calc-desc">Corrected Na, tonicity, urine pattern, and safe correction guardrails</div>
+          <div class="calc-row"><label>Na / Glucose</label><input type="number" id="hypona-na" step="1" oninput="calcHyponatremia()" placeholder="Na"><input type="number" id="hypona-glu" step="1" oninput="calcHyponatremia()" placeholder="Glucose"></div>
+          <div class="calc-row"><label>Serum Osm</label><input type="number" id="hypona-serum-osm" step="1" oninput="calcHyponatremia()" placeholder="optional"></div>
+          <div class="calc-row"><label>Urine Osm / Na</label><input type="number" id="hypona-urine-osm" step="1" oninput="calcHyponatremia()" placeholder="Uosm"><input type="number" id="hypona-urine-na" step="1" oninput="calcHyponatremia()" placeholder="UNa"></div>
+          <div class="calc-row"><label>Volume status</label><select id="hypona-volume" onchange="calcHyponatremia()"><option value="unknown">Not clear</option><option value="hypovolemic">Hypovolemic</option><option value="euvolemic">Euvolemic</option><option value="hypervolemic">Hypervolemic</option></select></div>
+          <div class="calc-row"><label>Acuity</label><select id="hypona-chronicity" onchange="calcHyponatremia()"><option value="unknown">Unknown / chronic</option><option value="acute">Clearly acute (&lt;48h)</option><option value="chronic">Chronic (&ge;48h)</option></select></div>
+          <div class="calc-row"><label>Symptoms</label><select id="hypona-symptoms" onchange="calcHyponatremia()"><option value="none">None/mild</option><option value="moderate">Moderate</option><option value="severe">Seizure/coma/severe</option></select></div>
+          <div class="calc-row"><label>ODS risk</label><select id="hypona-ods-risk" onchange="calcHyponatremia()"><option value="standard">Standard</option><option value="high">High risk</option></select></div>
+          <div class="calc-result rich" id="hypona-result">—</div>
+        </div>
+      </div>
+
+      <!-- ==================== ICU ==================== -->
+      <div class="calc-cat-section active" data-cat="icu">
+        <div class="calc-cat-title">ICU</div>
+
+        <div class="calc-card" data-calc="news2">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <h3>NEWS2</h3>
+            <button class="calc-clear-btn" onclick="clearCalc('news2')" title="Clear">&#10005;</button>
+          </div>
+          <div class="calc-desc">National Early Warning Score 2</div>
+          <div class="calc-row"><label>RR (breaths/min)</label><input type="number" id="news-rr" step="1" oninput="calcNEWS2()"></div>
+          <div class="calc-row"><label>SpO₂ (%)</label><input type="number" id="news-spo2" step="1" oninput="calcNEWS2()"></div>
+          <div class="calc-row"><label>On supplemental O₂</label><select id="news-o2" onchange="calcNEWS2()"><option value="0">No (room air)</option><option value="2">Yes (+2)</option></select></div>
+          <div class="calc-row"><label>Temperature (°C)</label><input type="number" id="news-temp" step="0.1" oninput="calcNEWS2()"></div>
+          <div class="calc-row"><label>SBP (mmHg)</label><input type="number" id="news-sbp" step="1" oninput="calcNEWS2()"></div>
+          <div class="calc-row"><label>Heart Rate (bpm)</label><input type="number" id="news-hr" step="1" oninput="calcNEWS2()"></div>
+          <div class="calc-row"><label>Consciousness</label><select id="news-avpu" onchange="calcNEWS2()"><option value="0">Alert</option><option value="3">Confusion/V/P/U</option></select></div>
+          <div class="calc-result" id="news2-result">—</div>
+        </div>
+
+        <div class="calc-card" data-calc="sofa">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <h3>SOFA Score</h3>
+            <button class="calc-clear-btn" onclick="clearCalc('sofa')" title="Clear">&#10005;</button>
+          </div>
+          <div class="calc-desc">Sequential Organ Failure Assessment</div>
+          <div class="calc-row"><label>PaO₂/FiO₂ ratio</label><select id="sofa-resp" onchange="calcSOFA()"><option value="0">≥ 400</option><option value="1">300-399</option><option value="2">200-299</option><option value="3">&lt;200 + vent</option><option value="4">&lt;100 + vent</option></select></div>
+          <div class="calc-row"><label>Platelets (×10³/μL)</label><select id="sofa-coag" onchange="calcSOFA()"><option value="0">≥ 150</option><option value="1">100-149</option><option value="2">50-99</option><option value="3">20-49</option><option value="4">&lt; 20</option></select></div>
+          <div class="calc-row"><label>Bilirubin (mg/dL)</label><select id="sofa-liver" onchange="calcSOFA()"><option value="0">&lt; 1.2</option><option value="1">1.2-1.9</option><option value="2">2.0-5.9</option><option value="3">6.0-11.9</option><option value="4">≥ 12</option></select></div>
+          <div class="calc-row"><label>MAP / Vasopressors</label><select id="sofa-cardio" onchange="calcSOFA()"><option value="0">MAP ≥ 70</option><option value="1">MAP &lt; 70</option><option value="2">Dopa ≤5 or dobutamine</option><option value="3">Dopa &gt;5 or epi/norepi ≤0.1</option><option value="4">Dopa &gt;15 or epi/norepi &gt;0.1</option></select></div>
+          <div class="calc-row"><label>GCS</label><select id="sofa-neuro" onchange="calcSOFA()"><option value="0">15</option><option value="1">13-14</option><option value="2">10-12</option><option value="3">6-9</option><option value="4">&lt; 6</option></select></div>
+          <div class="calc-row"><label>Creatinine (mg/dL) / UO</label><select id="sofa-renal" onchange="calcSOFA()"><option value="0">&lt; 1.2</option><option value="1">1.2-1.9</option><option value="2">2.0-3.4</option><option value="3">3.5-4.9 or UO &lt;500mL/d</option><option value="4">≥ 5.0 or UO &lt;200mL/d</option></select></div>
+          <div class="calc-result" id="sofa-result">—</div>
+        </div>
+
+        <div class="calc-card" data-calc="qsofa">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <h3>qSOFA</h3>
+            <button class="calc-clear-btn" onclick="clearCalc('qsofa')" title="Clear">&#10005;</button>
+          </div>
+          <div class="calc-desc">Quick SOFA — bedside sepsis screening (score ≥ 2 = high risk)</div>
+          <div class="calc-row"><label>RR ≥ 22 breaths/min</label><select id="qsofa-rr" onchange="calcQSOFA()"><option value="0">No</option><option value="1">Yes (+1)</option></select></div>
+          <div class="calc-row"><label>Altered mentation (GCS &lt; 15)</label><select id="qsofa-ment" onchange="calcQSOFA()"><option value="0">No</option><option value="1">Yes (+1)</option></select></div>
+          <div class="calc-row"><label>SBP ≤ 100 mmHg</label><select id="qsofa-sbp" onchange="calcQSOFA()"><option value="0">No</option><option value="1">Yes (+1)</option></select></div>
+          <div class="calc-result" id="qsofa-result">—</div>
+        </div>
+      </div>
+
+      <!-- ==================== WARD SAFETY ==================== -->
+      <div class="calc-cat-section active" data-cat="ward">
+        <div class="calc-cat-title">Ward Safety</div>
+
+        <div class="calc-card" data-calc="abg">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <h3>ABG / Acid-Base</h3>
+            <button class="calc-clear-btn" onclick="clearCalc('abg')" title="Clear">&#10005;</button>
+          </div>
+          <div class="calc-desc">Primary disorder, expected compensation, corrected anion gap</div>
+          <div class="calc-row"><label>pH</label><input type="number" id="abg-ph" step="0.01" oninput="calcABG()"></div>
+          <div class="calc-row"><label>PaCO₂</label><input type="number" id="abg-paco2" step="1" oninput="calcABG()"></div>
+          <div class="calc-row"><label>HCO₃</label><input type="number" id="abg-hco3" step="0.1" oninput="calcABG()"></div>
+          <div class="calc-row"><label>Na / Cl</label><input type="number" id="abg-na" step="1" oninput="calcABG()" placeholder="Na"><input type="number" id="abg-cl" step="1" oninput="calcABG()" placeholder="Cl"></div>
+          <div class="calc-row"><label>Albumin optional</label><input type="number" id="abg-alb" step="0.1" oninput="calcABG()"></div>
+          <div class="calc-result" id="abg-result">—</div>
+        </div>
+
+        <div class="calc-card" data-calc="nafree">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <h3>Corrected Na / Free Water</h3>
+            <button class="calc-clear-btn" onclick="clearCalc('nafree')" title="Clear">&#10005;</button>
+          </div>
+          <div class="calc-desc">Hyperglycemia-corrected sodium and water deficit estimate</div>
+          <div class="calc-row"><label>Na / Glucose</label><input type="number" id="nafree-na" step="1" oninput="calcNaFreeWater()" placeholder="Na"><input type="number" id="nafree-glu" step="1" oninput="calcNaFreeWater()" placeholder="Glucose"></div>
+          <div class="calc-row"><label>Weight (kg)</label><input type="number" id="nafree-wt" step="0.5" oninput="calcNaFreeWater()"></div>
+          <div class="calc-row"><label>Sex</label><select id="nafree-sex" onchange="calcNaFreeWater()"><option value="M">Male</option><option value="F">Female</option></select></div>
+          <div class="calc-row"><label>Target Na</label><input type="number" id="nafree-target" step="1" oninput="calcNaFreeWater()" value="145"></div>
+          <div class="calc-result" id="nafree-result">—</div>
+        </div>
+
+        <div class="calc-card" data-calc="dkahhs">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <h3>DKA / HHS Helper</h3>
+            <button class="calc-clear-btn" onclick="clearCalc('dkahhs')" title="Clear">&#10005;</button>
+          </div>
+          <div class="calc-desc">DKA/HHS pattern, severity, osmolality, and potassium safety prompts</div>
+          <div class="calc-row"><label>Glucose / Na / K</label><input type="number" id="dkahhs-glu" step="1" oninput="calcDKAHHS()" placeholder="Glu"><input type="number" id="dkahhs-na" step="1" oninput="calcDKAHHS()" placeholder="Na"><input type="number" id="dkahhs-k" step="0.1" oninput="calcDKAHHS()" placeholder="K"></div>
+          <div class="calc-row"><label>pH / HCO₃ / BHB</label><input type="number" id="dkahhs-ph" step="0.01" oninput="calcDKAHHS()" placeholder="pH"><input type="number" id="dkahhs-hco3" step="0.1" oninput="calcDKAHHS()" placeholder="HCO3"><input type="number" id="dkahhs-bhb" step="0.1" oninput="calcDKAHHS()" placeholder="BHB"></div>
+          <div class="calc-row"><label>AG / BUN / Osm</label><input type="number" id="dkahhs-ag" step="0.1" oninput="calcDKAHHS()" placeholder="AG"><input type="number" id="dkahhs-bun" step="0.1" oninput="calcDKAHHS()" placeholder="BUN"><input type="number" id="dkahhs-osm" step="1" oninput="calcDKAHHS()" placeholder="Measured osm"></div>
+          <div class="calc-row"><label>Ketones / Mentation</label><select id="dkahhs-ketones" onchange="calcDKAHHS()"><option value="unknown">Unknown</option><option value="positive">Positive / ≥2+</option><option value="negative">Negative</option></select><select id="dkahhs-mental" onchange="calcDKAHHS()"><option value="alert">Alert</option><option value="drowsy">Drowsy / confused</option><option value="stupor">Stupor / coma</option></select></div>
+          <div class="calc-result" id="dkahhs-result">—</div>
+        </div>
+
+        <div class="calc-card" data-calc="padua">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <h3>Padua VTE / IMPROVE Bleeding</h3>
+            <button class="calc-clear-btn" onclick="clearCalc('padua')" title="Clear">&#10005;</button>
+          </div>
+          <div class="calc-desc">Medical inpatient VTE prophylaxis and bleeding risk screen</div>
+          <div class="calc-row"><label>Padua major</label><select id="padua-major" onchange="calcPaduaImprove()"><option value="0">None</option><option value="3">One major factor (+3)</option><option value="6">Two major factors (+6)</option><option value="9">Three major factors (+9)</option></select></div>
+          <div class="calc-row"><label>Padua minor points</label><input type="number" id="padua-minor" min="0" max="7" step="1" oninput="calcPaduaImprove()" placeholder="Age/HF/MI/infx/BMI/hormonal"></div>
+          <div class="calc-row"><label>IMPROVE major</label><select id="improve-major" onchange="calcPaduaImprove()"><option value="0">None</option><option value="4">One major bleed risk (+4)</option><option value="8">Two major bleed risks (+8)</option><option value="12">Three major bleed risks (+12)</option></select></div>
+          <div class="calc-row"><label>IMPROVE other points</label><input type="number" id="improve-other" min="0" max="10" step="0.5" oninput="calcPaduaImprove()" placeholder="Age/renal/liver/ICU/CVC/etc"></div>
+          <div class="calc-result" id="padua-result">—</div>
+        </div>
+
+        <div class="calc-card" data-calc="feurea">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <h3>FEUrea</h3>
+            <button class="calc-clear-btn" onclick="clearCalc('feurea')" title="Clear">&#10005;</button>
+          </div>
+          <div class="calc-desc">Fractional excretion of urea for AKI review, especially with diuretics</div>
+          <div class="calc-row"><label>Serum urea/BUN</label><input type="number" id="feurea-surea" step="0.1" oninput="calcFEUrea()"></div>
+          <div class="calc-row"><label>Urine urea/BUN</label><input type="number" id="feurea-uurea" step="0.1" oninput="calcFEUrea()"></div>
+          <div class="calc-row"><label>Serum Cr</label><input type="number" id="feurea-scr" step="0.01" oninput="calcFEUrea()"></div>
+          <div class="calc-row"><label>Urine Cr</label><input type="number" id="feurea-ucr" step="0.1" oninput="calcFEUrea()"></div>
+          <div class="calc-result" id="feurea-result">—</div>
+        </div>
+
+        <div class="calc-card" data-calc="elytes">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <h3>Electrolyte Replacement Review</h3>
+            <button class="calc-clear-btn" onclick="clearCalc('elytes')" title="Clear">&#10005;</button>
+          </div>
+          <div class="calc-desc">Review-oriented replacement ranges with renal caution labels</div>
+          <div class="calc-row"><label>K / Mg / Phos</label><input type="number" id="elytes-k" step="0.1" oninput="calcElectrolytes()" placeholder="K"><input type="number" id="elytes-mg" step="0.1" oninput="calcElectrolytes()" placeholder="Mg"><input type="number" id="elytes-phos" step="0.1" oninput="calcElectrolytes()" placeholder="Phos"></div>
+          <div class="calc-row"><label>eGFR</label><input type="number" id="elytes-egfr" step="1" oninput="calcElectrolytes()"></div>
+          <div class="calc-result" id="elytes-result">—</div>
+        </div>
+      </div>
+
+      <!-- ==================== DOSING ==================== -->
+      <div class="calc-cat-section active" data-cat="dosing">
+        <div class="calc-cat-title">Renal Drug Dosing</div>
+
+        <div class="calc-card" data-calc="dosing" style="grid-column: 1 / -1;">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <h3>Drug Dosing — Renal Adjustment</h3>
+            <button class="calc-clear-btn" onclick="clearDosingCalc()" title="Clear">&#10005;</button>
+          </div>
+          <div class="calc-desc">Dose recommendations adjusted for renal function. Verify with pharmacy for critical patients.</div>
+          <div class="calc-row">
+            <label>Drug</label>
+            <select id="dosing-drug" onchange="calcDosing()" style="font-family:var(--mono);font-size:0.65rem;padding:0.25rem 0.4rem;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--text);max-width:240px;">
+              <option value="">— Select drug —</option>
+              <optgroup label="Antibacterials — Beta-Lactams">
+                <option value="pipTazo">Piperacillin-Tazobactam</option>
+                <option value="meropenem">Meropenem</option>
+                <option value="cefepime">Cefepime</option>
+                <option value="ceftazidime">Ceftazidime</option>
+                <option value="cefazolin">Cefazolin</option>
+                <option value="ampSulbactam">Ampicillin-Sulbactam</option>
+              </optgroup>
+              <optgroup label="Antibacterials — Glycopeptides / Oxazolidinones">
+                <option value="vancomycin">Vancomycin</option>
+              </optgroup>
+              <optgroup label="Antibacterials — Aminoglycosides">
+                <option value="gentamicin">Gentamicin</option>
+                <option value="amikacin">Amikacin</option>
+              </optgroup>
+              <optgroup label="Antibacterials — Fluoroquinolones">
+                <option value="levofloxacin">Levofloxacin</option>
+                <option value="ciprofloxacin">Ciprofloxacin</option>
+              </optgroup>
+              <optgroup label="Antibacterials — Other">
+                <option value="tmpSmx">TMP-SMX (Bactrim)</option>
+                <option value="metronidazole">Metronidazole</option>
+                <option value="nitrofurantoin">Nitrofurantoin</option>
+              </optgroup>
+              <optgroup label="Antifungals">
+                <option value="fluconazole">Fluconazole</option>
+                <option value="micafungin">Micafungin</option>
+              </optgroup>
+              <optgroup label="Antivirals">
+                <option value="acyclovir">Acyclovir (IV)</option>
+                <option value="ganciclovir">Ganciclovir (IV)</option>
+              </optgroup>
+              <optgroup label="Other — Anticoagulants / Metabolic">
+                <option value="enoxaparin">Enoxaparin</option>
+                <option value="metformin">Metformin</option>
+              </optgroup>
+            </select>
+          </div>
+          <div class="calc-row"><label>Patient weight (kg)</label><input type="number" id="dosing-wt" step="0.5" min="20" max="200" oninput="calcDosing()" placeholder="e.g. 65"></div>
+          <div class="calc-row" style="align-items:center;gap:0.5rem;flex-wrap:wrap;">
+            <label>CrCl / eGFR (mL/min)</label>
+            <input type="number" id="dosing-crcl" step="1" min="0" max="200" oninput="calcDosing()" placeholder="e.g. 45" style="flex:1;min-width:80px;max-width:100px;">
+            <button class="btn-secondary" onclick="pullGFRIntoDosingCalc()" style="font-size:0.58rem;padding:0.2rem 0.5rem;" title="Use eGFR value already computed in the Renal section">&#8635; Use current eGFR</button>
+          </div>
+          <div class="calc-result" id="dosing-result">—</div>
+        </div>
+<!-- EKG Wizard Overlay -->
+<div id="ekgWizardOverlay" class="ekw-overlay">
+  <div class="ekw-shell">
+
+    <!-- Header -->
+    <div class="ekw-header">
+      <span class="ekw-header-title">EKG Systematic Interpretation</span>
+      <span id="ekgWizStepName" class="ekw-step-badge"></span>
+      <span id="ekgWizCount" class="ekw-step-badge" style="margin-left:0.25rem;"></span>
+      <button class="ekw-close-btn" onclick="closeEkgWizard()" title="Close (Esc)">&#10005;</button>
+    </div>
+
+    <!-- Progress bar -->
+    <div class="ekw-progress">
+      <div class="ekw-progress-fill" id="ekgWizFill"></div>
+    </div>
+
+    <!-- Crumb bar -->
+    <div class="ekw-crumb" id="ekgWizCrumb"></div>
+
+    <!-- Body: slide viewport + reference panel -->
+    <div class="ekw-body">
+      <div class="ekw-viewport" id="ekgWizVp"></div>
+
+      <!-- Reference panel -->
+      <div class="ekw-ref" id="ekgWizRef">
+        <div class="ekw-ref-inner">
+          <div class="ekw-ref-head">Clinical Reference</div>
+          <div class="ekw-ref-body" id="ekgWizRefBody">
+            <div class="ekw-ref-sec">
+              <div class="ekw-ref-sec-title">Rate Estimation</div>
+              <p>300 / (# large boxes between R waves)</p>
+              <div class="ekw-ref-formula">300 → 150 → 100 → 75 → 60 → 50</div>
+            </div>
+            <div class="ekw-ref-sec">
+              <div class="ekw-ref-sec-title">PR Interval</div>
+              <p>Normal: 120–200 ms (3–5 small boxes)</p>
+              <p>1° AVB: &gt;200 ms</p>
+              <p>2° Mobitz I: progressive lengthening → dropped beat</p>
+              <p>2° Mobitz II: fixed PR with dropped beats</p>
+              <p>3° AV block: complete dissociation</p>
+            </div>
+            <div class="ekw-ref-sec">
+              <div class="ekw-ref-sec-title">QRS Width</div>
+              <p>Normal: &lt;120 ms (&lt;3 small boxes)</p>
+              <p>RBBB: rsR′ in V1; wide S in I/V6</p>
+              <p>LBBB: broad R in I/aVL/V5–V6; no septal q</p>
+            </div>
+            <div class="ekw-ref-sec">
+              <div class="ekw-ref-sec-title">Axis (Quick)</div>
+              <div class="ekw-ref-formula">I ↑, aVF ↑ → Normal
+I ↑, aVF ↓ → LAD
+I ↓, aVF ↑ → RAD
+I ↓, aVF ↓ → Extreme</div>
+            </div>
+            <div class="ekw-ref-sec">
+              <div class="ekw-ref-sec-title">QTc (Bazett)</div>
+              <div class="ekw-ref-formula">QTc = QT ÷ √RR(s)
+Normal: ♂ &lt;440ms, ♀ &lt;460ms
+Prolonged: &gt;500ms = high risk</div>
+            </div>
+            <div class="ekw-ref-sec">
+              <div class="ekw-ref-sec-title">LVH Voltage</div>
+              <p>SV1 + RV5 or RV6 &gt;35 mm</p>
+              <p>R in aVL &gt;11 mm</p>
+              <p>R in I + S in III &gt;25 mm</p>
+            </div>
+            <div class="ekw-ref-sec">
+              <div class="ekw-ref-sec-title">Sgarbossa (LBBB)</div>
+              <p>≥5 pts = likely ischemia</p>
+              <p>+5: concordant STE ≥1mm</p>
+              <p>+3: concordant STD ≥1mm in V1–V3</p>
+              <p>+2: discordant STE ≥5mm</p>
+            </div>
+            <div class="ekw-ref-sec">
+              <div class="ekw-ref-sec-title">Wellens Syndrome</div>
+              <p>Type A: biphasic T in V2–V3</p>
+              <p>Type B: deep symmetric T inversion V2–V3</p>
+              <p>→ Critical LAD stenosis; avoid stress testing</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="ekw-footer">
+      <div class="ekw-footer-left">
+        <button class="ekw-back-btn" id="ekgWizBackBtn" onclick="ekgWizBack()" disabled>&#8592; Back</button>
+        <button class="ekw-restart-btn" onclick="ekgWizRestart()">&#8635; Restart</button>
+      </div>
+      <div class="ekw-footer-right">
+        <button class="ekw-ref-btn" id="ekgWizRefIcon" onclick="ekgWizToggleRef()">&#9432; Reference</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Patient Census Board -->
+<div class="view" id="view-census">
+  <div class="census-panel">
+    <div class="census-header">
+      <h2>Patient Census</h2>
+      <span class="census-count" id="census-count">Loading...</span>
+      <div class="census-actions">
+        <button class="btn-secondary" onclick="loadCensus()">&#8635; Refresh</button>
+        <button class="btn-primary" onclick="switchView('handoff')">Open Handoff</button>
+      </div>
+    </div>
+    <div class="census-body" id="census-body">
+      <div class="census-empty">
+        <div class="census-empty-icon">&#9638;</div>
+        <div>Loading patient census...</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Ward Board — all-patients risk-stratified overview (Alt+5) -->
+<!-- See FEATURES.md §Feature 3 for full spec -->
+<div class="view" id="view-ward">
+  <div class="ward-panel">
+
+    <div class="ward-header">
+      <div class="ward-header-left">
+        <h2>Ward Board</h2>
+        <span class="ward-count" id="ward-count">Loading...</span>
+      </div>
+      <div class="ward-header-controls">
+        <label class="ward-sort-label" for="ward-sort-select">Sort</label>
+        <select id="ward-sort-select" onchange="handleWardSortChange(this.value)">
+          <option value="risk">By risk (alerts ↓)</option>
+          <option value="name">By name</option>
+          <option value="days">By days admitted ↓</option>
+          <option value="code">By code status</option>
+        </select>
+        <button class="btn-secondary" onclick="loadWardBoard()">&#8635; Refresh</button>
+      </div>
+    </div>
+
+    <!-- Legend bar -->
+    <div class="ward-legend" id="ward-legend" style="display:none;">
+      <span class="ward-legend-item"><span class="ward-badge code-full">Full</span> Full code</span>
+      <span class="ward-legend-item"><span class="ward-badge code-dnr">DNR</span> DNR</span>
+      <span class="ward-legend-item"><span class="ward-badge code-dnr-dni">DNR-DNI</span></span>
+      <span class="ward-legend-item"><span class="ward-badge code-comfort">Comfort</span></span>
+      <span class="ward-legend-item"><span class="ward-badge code-unknown">?</span> Unknown</span>
+      <span class="ward-legend-sep">|</span>
+      <span class="ward-legend-item"><span class="ward-alert-chip danger">2</span> Danger alerts</span>
+      <span class="ward-legend-item"><span class="ward-alert-chip warn">1</span> Warn alerts</span>
+    </div>
+
+    <!-- Board body -->
+    <div class="ward-board-body" id="ward-board-body">
+      <div class="ward-empty">
+        <div class="ward-spinner"></div>
+        <div style="margin-top:0.6rem;">Loading ward data...</div>
+      </div>
+    </div>
+
+    <!-- Status bar -->
+    <div class="ward-status" id="ward-status"></div>
+
+  </div>
+</div>
+
+<!--
+  IMPLEMENTATION NOTES (see FEATURES.md §Feature 3):
+
+  Table structure when loaded:
+  <table class="ward-table">
+    <thead>
+      <tr>
+        <th>Patient</th>
+        <th>Dx / Days</th>
+        <th>Code</th>
+        <th>BP / HR / SpO2</th>
+        <th>K</th><th>Cr</th><th>WBC</th><th>CRP</th>
+        <th>Alerts</th>
+        <th>Pending</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody id="ward-table-body">
+      ... rows rendered by renderWardRow() in portal-ward.js ...
+    </tbody>
+  </table>
+
+  Each row has class "ward-row" + optional "ward-row-danger" / "ward-row-warn"
+  depending on highest alert severity.
+
+  Clicking a row calls openPatientContextById(pid, { view: true }).
+  Action buttons use event.stopPropagation().
+-->
+
+<div class="view" id="view-todos">
+  <div class="todos-page">
+    <div class="todos-header">
+      <div>
+        <h2>Ward Todos</h2>
+        <p>Patient-specific and ward-level tasks for rounds.</p>
+      </div>
+      <span class="todos-count" id="todos-count">Loading...</span>
+    </div>
+
+    <div class="todos-toolbar">
+      <label>
+        Status
+        <select id="todos-status-filter" onchange="loadTodosPage()">
+          <option value="open">Open</option>
+          <option value="all">All</option>
+          <option value="done">Done</option>
+        </select>
+      </label>
+      <label>
+        Patient
+        <select id="todos-patient-filter" onchange="loadTodosPage()">
+          <option value="">All patients + ward</option>
+          <option value="__untagged">Ward-level only</option>
+        </select>
+      </label>
+      <label>
+        Priority
+        <select id="todos-priority-filter" onchange="loadTodosPage()">
+          <option value="">Any priority</option>
+          <option value="high">High</option>
+          <option value="normal">Normal</option>
+          <option value="low">Low</option>
+        </select>
+      </label>
+      <button class="btn-secondary" onclick="loadTodosPage()">Refresh</button>
+    </div>
+
+    <section class="todos-card">
+      <div class="todos-card-title">Add Todo</div>
+      <div class="todos-form">
+        <input id="todos-new-title" type="text" placeholder="Task to do">
+        <select id="todos-new-priority">
+          <option value="normal">Normal</option>
+          <option value="high">High</option>
+          <option value="low">Low</option>
+        </select>
+        <select id="todos-new-patient">
+          <option value="">Ward-level</option>
+        </select>
+        <input id="todos-new-due" type="text" inputmode="numeric" placeholder="20260505 1745" title="Due date/time, e.g. 20260505 1745" onblur="normalizeTodoDueField(this)">
+        <button class="btn-primary" onclick="handleTodosPageCreate()">Add</button>
+      </div>
+      <textarea id="todos-new-note" class="todos-note-input" placeholder="Optional note"></textarea>
+      <div class="todos-status" id="todos-page-status"></div>
+    </section>
+
+    <div id="todos-list" class="todos-list">
+      <div class="todos-empty">Loading todos...</div>
+    </div>
+  </div>
+</div>
+
+<!-- Patient Context Workspace -->
+<div class="view" id="view-patient-context">
+  <div class="patient-context-workspace" id="patient-context-workspace">
+    <div class="pc-page-empty">
+      <div class="pc-page-empty-icon">&#129658;</div>
+      <h2>Patient Context</h2>
+      <p>Select a patient from the sidebar, Ward Board, Calculator, or Handoff to review trendlines and recent events.</p>
+      <div class="pc-page-empty-actions">
+        <button class="btn-primary" onclick="switchView('ward')">Open Ward Board</button>
+        <button class="btn-secondary" onclick="switchView('handoff')">Open Handoff</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Antibiotic Empiric Guide -->
+<div class="view" id="view-abx">
+  <div class="abx-panel">
+    <div class="abx-header">
+      <h2>&#128138; Empiric Antibiotic Guide</h2>
+      <p>Demo reference content. Verify all clinical decisions with local guidance.</p>
+      <div class="patient-hook" id="abx-patient-hook" style="display:none;">
+        <div class="patient-hook-meta">
+          <span class="patient-hook-label">Active patient</span>
+          <span class="patient-hook-name" id="abx-patient-name">—</span>
+        </div>
+        <div class="patient-hook-chips" id="abx-patient-chips"></div>
+        <button class="patient-hook-btn" onclick="openPatientContextWorkspace()">Open Context</button>
+      </div>
+      <div class="abx-toolbar">
+        <input class="abx-search" id="abx-search" type="text" placeholder="Search infection, drug, organism..." oninput="filterAbx()">
+        <button class="abx-filter-btn active" data-abx-filter="all" onclick="setAbxFilter('all',this)">All</button>
+        <button class="abx-filter-btn" data-abx-filter="oral" onclick="setAbxFilter('oral',this)">Oral</button>
+        <button class="abx-filter-btn" data-abx-filter="iv" onclick="setAbxFilter('iv',this)">IV</button>
+        <button class="abx-filter-btn" data-abx-filter="icu" onclick="setAbxFilter('icu',this)">ICU</button>
+        {% if portal_config.show_local_abx_notes %}
+        <button class="abx-filter-btn" data-abx-filter="tw" onclick="setAbxFilter('tw',this)">&#127481;&#127484; </button>
+        {% endif %}
+        <button class="abx-filter-btn" data-abx-filter="fungal" onclick="setAbxFilter('fungal',this)">&#127812; Antifungal</button>
+        <div class="abx-filter-sep"></div>
+        <button class="abx-sev-btn active" data-abx-sev="all" onclick="setAbxSevFilter('all',this)">All Severity</button>
+        <button class="abx-sev-btn" data-abx-sev="mild" onclick="setAbxSevFilter('mild',this)">Mild</button>
+        <button class="abx-sev-btn" data-abx-sev="moderate" onclick="setAbxSevFilter('moderate',this)">Moderate</button>
+        <button class="abx-sev-btn" data-abx-sev="severe" onclick="setAbxSevFilter('severe',this)">Severe</button>
+        <div class="abx-filter-sep"></div>
+        <button class="abx-filter-btn" id="abx-lookup-btn" onclick="toggleBugLookup(this)">🧫 Bug Lookup</button>
+        <button class="abx-filter-btn" id="abx-spectrum-btn" onclick="toggleAbxSpectrum(this)">&#128202; Spectrum</button>
+      </div>
+      <div class="abx-lookup-panel" id="abx-lookup-panel" style="display:none;">
+        <div class="abx-lookup-controls">
+          <label class="abx-lookup-field">
+            <span>Organism / Pattern</span>
+            <select id="abx-bug-select" onchange="renderBugLookup()"></select>
+          </label>
+          <label class="abx-lookup-field">
+            <span>Clinical Site</span>
+            <select id="abx-bug-site-select" onchange="renderBugLookup()"></select>
+          </label>
+        </div>
+        <div class="abx-lookup-result" id="abx-lookup-result">
+          Select an organism profile to review likely active agents and common traps.
+        </div>
+      </div>
+    </div>
+    <div class="abx-scroll-area">
+    <div id="abx-spectrum" style="display:none;"></div>
+    <div class="abx-body" id="abx-body">
+      <div class="abx-empty" id="abx-empty">No results found.</div>
+      <!-- Cards injected by JS -->
+    </div>
+    <div class="abx-deesc-card collapsed" id="abx-deesc-card" style="display:none;">
+      <div class="abx-deesc-header" onclick="toggleAbxDeescalationCard()">
+        <div>
+          <div class="abx-deesc-title">De-escalation Check</div>
+          <div class="abx-deesc-subtitle">Structured stewardship review using the active patient's context.</div>
+        </div>
+        <span class="abx-chevron">&#9660;</span>
+      </div>
+      <div class="abx-deesc-body">
+        <div class="abx-deesc-ai-banner" id="abx-deesc-ai-banner">
+          Demo mode returns canned AI responses without an API key.
+        </div>
+        <div class="abx-deesc-grid">
+          <label class="abx-deesc-field abx-deesc-field-wide">
+            <span>Current Antibiotic(s)</span>
+            <input id="abx-deesc-current" type="text" placeholder="e.g. Pip/tazo 4.5 g q8h IV">
+          </label>
+          <label class="abx-deesc-field">
+            <span>Days of Therapy</span>
+            <input id="abx-deesc-days" type="number" min="0" step="1" placeholder="3">
+          </label>
+          <label class="abx-deesc-field">
+            <span>Clinical Trend</span>
+            <select id="abx-deesc-trend">
+              <option value="improving">Improving</option>
+              <option value="stable" selected>Stable</option>
+              <option value="worsening">Worsening</option>
+            </select>
+          </label>
+          <label class="abx-deesc-field abx-deesc-field-wide">
+            <span>Culture Result</span>
+            <textarea id="abx-deesc-culture" rows="3" placeholder="Optional. Leave blank if microbiology is still pending."></textarea>
+          </label>
+        </div>
+        <label class="abx-deesc-check">
+          <input id="abx-deesc-source" type="checkbox">
+          <span>Source control achieved</span>
+        </label>
+        <div class="abx-deesc-actions">
+          <button class="abx-filter-btn" id="abx-deesc-run-btn" onclick="runDeescalationCheck()">Run De-escalation Check</button>
+          <button class="abx-filter-btn" id="abx-deesc-copy-btn" onclick="copyDeescalationReview()" disabled>Copy Review</button>
+        </div>
+        <div class="abx-deesc-status" id="abx-deesc-status"></div>
+        <div class="abx-deesc-output" id="abx-deesc-output">
+          <div class="abx-deesc-empty">No de-escalation review yet.</div>
+        </div>
+      </div>
+    </div>
+    <div class="abx-disclaimer">
+      &#9888;&#65039; For reference only. Doses assume normal hepatic function. Verify renal dosing in the Dosing Calculator tab.
+      Consult ID for carbapenem-resistant organisms, fungemia, or CNS infections. Last reviewed March 2026.
+    </div>
+    </div><!-- /.abx-scroll-area -->
+  </div>
+</div>
+
+<!-- Drug Reference -->
+<div class="view" id="view-drugs">
+  <div style="padding:0.6rem 1rem 0.5rem; border-bottom:1px solid var(--border); flex-shrink:0; background:var(--surface2);">
+    <h2 style="font-size:0.88rem; margin:0 0 0.15rem; font-weight:700;">&#128138; Drug Reference</h2>
+    <p style="font-size:0.6rem; color:var(--text-dim); margin:0;">Demo medication reference content for UI evaluation only.</p>
+    <div class="patient-hook" id="drugs-patient-hook" style="display:none;margin-top:0.45rem;">
+      <div class="patient-hook-meta">
+        <span class="patient-hook-label">Active patient</span>
+        <span class="patient-hook-name" id="drugs-patient-name">—</span>
+      </div>
+      <div class="patient-hook-chips" id="drugs-patient-chips"></div>
+      <button class="patient-hook-btn" onclick="openPatientContextWorkspace()">Open Context</button>
+    </div>
+  </div>
+  <div class="drugs-toolbar">
+    <div class="drugs-row-main">
+      <input class="drugs-search" id="drugs-search" type="text" placeholder="Search drug name, class..." oninput="filterDrugs()">
+      <div class="drugs-cat-list" id="drugs-cat-list"></div>
+    </div>
+    <div class="drugs-subrow" id="drugs-subrow" style="display:none">
+      <span class="drugs-sublabel">↳</span>
+      <div class="drugs-sub-list" id="drugs-sub-list"></div>
+    </div>
+  </div>
+  <div class="drug-grid" id="drug-grid">
+    <div class="drugs-empty" id="drugs-empty">No drugs found.</div>
+  </div>
+</div>
+
+<!-- Rules -->
+<div class="view" id="view-rules">
+  <div class="rules-page">
+    <div class="rules-header">
+      <div>
+        <h2>Rules</h2>
+        <p>Deterministic safety and lab-alert rules used by Patient Context and Ward Board.</p>
+      </div>
+      <div class="rules-header-actions">
+        <span class="rules-chip muted hidden" id="rules-user-count"></span>
+        <button class="btn-secondary" onclick="resetRuleEditor(); openRuleEditor();">New Rule</button>
+      </div>
+    </div>
+
+    <div class="rules-layout">
+
+      <!-- Left: full catalog (built-ins + custom rules mixed in) -->
+      <section class="rules-panel">
+        <div class="rules-panel-header">
+          <div class="rules-panel-title">Rules Catalog</div>
+          <input type="search" id="rules-search" class="rules-search" placeholder="Search rules" oninput="renderRulesCatalog()">
+        </div>
+        <div class="rules-cats" id="rules-cats"></div>
+        <div id="rules-builtins" class="rules-list"></div>
+      </section>
+
+      <!-- Right: editor (hidden until New Rule / Edit is clicked) -->
+      <section class="rules-panel rules-editor-panel">
+        <div class="rules-panel-header">
+          <div class="rules-panel-title">Rule Editor</div>
+          <button class="rules-panel-close" onclick="closeRuleEditor()" title="Close">✕</button>
+        </div>
+        <form class="rules-editor" id="rules-editor" onsubmit="saveRuleFromEditor(event)">
+          <input type="hidden" id="rule-id">
+
+          <label>Title
+            <input type="text" id="rule-title" required placeholder="e.g. Severe hypomagnesaemia">
+          </label>
+
+          <div class="rules-editor-grid">
+            <label>Domain
+              <select id="rule-domain">
+                <option value="Medication Safety">Medication Safety</option>
+                <option value="Renal / Electrolytes / Acid-Base">Renal / Electrolytes / Acid-Base</option>
+                <option value="Infection / Inflammation">Infection / Inflammation</option>
+                <option value="Hematology / Coagulation">Hematology / Coagulation</option>
+                <option value="Liver / Biliary">Liver / Biliary</option>
+                <option value="Endocrine / Metabolic">Endocrine / Metabolic</option>
+                <option value="General Lab Patterns" selected>General Lab Patterns</option>
+              </select>
+            </label>
+            <label>Tone
+              <select id="rule-tone">
+                <option value="warn">Warn</option>
+                <option value="danger">Danger</option>
+                <option value="info">Info</option>
+              </select>
+            </label>
+          </div>
+
+          <!-- Lab key autocomplete source (non-enforcing datalist) -->
+          <datalist id="rules-lab-keys">
+            <option value="Cr"><option value="BUN"><option value="eGFR">
+            <option value="Na"><option value="K"><option value="Cl">
+            <option value="HCO3"><option value="Ca"><option value="Mg"><option value="Phos">
+            <option value="WBC"><option value="ANC"><option value="Hgb"><option value="Plt">
+            <option value="CRP"><option value="Ferritin"><option value="LDH"><option value="PCT">
+            <option value="INR"><option value="APTT"><option value="Fibrinogen">
+            <option value="AST"><option value="ALT"><option value="ALP">
+            <option value="TBili"><option value="Alb">
+            <option value="CK"><option value="UricAcid">
+            <option value="Glu"><option value="QTc"><option value="TSH"><option value="FT4">
+          </datalist>
+
+          <!-- Condition builder -->
+          <div class="rules-conditions-block">
+            <div class="rules-conditions-label">Conditions</div>
+            <div id="rule-logic-row" class="rules-logic-row" style="display:none"></div>
+            <div id="rule-conditions" class="rules-conditions"></div>
+            <button type="button" class="rules-add-cond-btn" onclick="addCondition()">+ Add condition</button>
+            <details class="rules-lab-ref">
+              <summary>Supported lab keys</summary>
+              <div class="rules-lab-ref-body">
+                <div class="rules-lab-ref-group"><b>Renal</b> Cr · BUN · eGFR</div>
+                <div class="rules-lab-ref-group"><b>Electrolytes</b> Na · K · Cl · HCO3 · Ca · Mg · Phos</div>
+                <div class="rules-lab-ref-group"><b>Haematology</b> WBC · ANC · Hgb · Plt</div>
+                <div class="rules-lab-ref-group"><b>Coagulation</b> INR · APTT · Fibrinogen</div>
+                <div class="rules-lab-ref-group"><b>Inflammation</b> CRP · Ferritin · LDH · PCT</div>
+                <div class="rules-lab-ref-group"><b>Liver</b> AST · ALT · ALP · TBili · Alb</div>
+                <div class="rules-lab-ref-group"><b>Other</b> CK · UricAcid · Glu · QTc · TSH · FT4</div>
+              </div>
+            </details>
+          </div>
+
+          <label>Alert Text
+            <textarea id="rule-body" rows="3" placeholder="Review magnesium replacement, ECG/QT context, and symptoms."></textarea>
+          </label>
+
+          <label>Source / Note
+            <input type="text" id="rule-source" placeholder="User-defined local rule">
+          </label>
+
+          <label class="rules-check">
+            <input type="checkbox" id="rule-enabled" checked> Enabled
+          </label>
+
+          <div class="rules-editor-actions">
+            <button class="btn-primary" type="submit">Save Rule</button>
+            <button class="btn-secondary" type="button" onclick="resetRuleEditor()">Clear</button>
+            <span class="rules-status" id="rules-status"></span>
+          </div>
+        </form>
+      </section>
+
+    </div>
+  </div>
+</div>
+
+<!-- Consults -->
+<div class="view" id="view-consults">
+  <div class="consults-panel">
+    <div class="consults-header">
+      <div>
+        <h2>Consults</h2>
+        <p>Draft a de-identified consult request note, then ask the AI for an immediate specialty-style opinion.</p>
+      </div>
+      <div class="consults-actions">
+        <button class="btn-secondary" id="consults-refresh-btn" onclick="refreshConsultPatientList()">&#8635; Refresh Patients</button>
+      </div>
+    </div>
+
+    <div class="consults-body">
+      <div class="consults-sidebar">
+        <div class="consults-card">
+          <div class="consults-card-title">Selected Patient</div>
+          <div class="consults-summary" id="consults-patient-summary">
+            <div class="consults-empty">No patient selected.</div>
+          </div>
+        </div>
+
+        <div class="consults-card">
+          <label class="consults-label" for="consults-patient-select">Patient</label>
+          <select id="consults-patient-select"></select>
+
+          <label class="consults-label" for="consults-specialty-select">Subspecialty</label>
+          <select id="consults-specialty-select">
+            <option value="">Choose specialty</option>
+            <option value="cardiology">Cardiology</option>
+            <option value="neurology">Neurology</option>
+            <option value="nephrology">Nephrology</option>
+            <option value="pulmonology">Pulmonology</option>
+            <option value="gastroenterology">Gastroenterology</option>
+            <option value="infectious_disease">Infectious Disease</option>
+            <option value="hematology_oncology">Hematology / Oncology</option>
+            <option value="endocrinology">Endocrinology</option>
+            <option value="rheumatology">Rheumatology</option>
+            <option value="general_surgery">General Surgery</option>
+            <option value="orthopedics">Orthopedics</option>
+            <option value="psychiatry">Psychiatry</option>
+            <option value="palliative_care">Palliative Care</option>
+            <option value="other">Other</option>
+          </select>
+
+          <label class="consults-label" for="consults-specialty-other">Other Specialty</label>
+          <input id="consults-specialty-other" type="text" placeholder="e.g. Dermatology" disabled>
+
+          <div class="consults-inline-actions">
+            <button class="btn-primary" id="consults-generate-btn" onclick="generateConsultNote()">Generate Consult Note</button>
+          </div>
+
+          <div class="consults-status" id="consults-status"></div>
+          <div class="consults-ai-banner" id="consults-ai-banner">
+            Demo mode uses canned consult responses and never sends AI requests.
+          </div>
+        </div>
+      </div>
+
+      <div class="consults-main">
+        <div class="consults-card consults-editor-card">
+          <div class="consults-card-header">
+            <div>
+              <div class="consults-card-title">Consult Note</div>
+              <div class="consults-card-subtitle">Editable before copying into the hospital system.</div>
+            </div>
+            <div class="consults-inline-actions">
+              <button class="btn-secondary" id="consults-copy-btn" onclick="copyConsultNote()" disabled>Copy</button>
+            </div>
+          </div>
+          <textarea id="consults-note-output" class="consults-textarea" placeholder="Generate a consult note to start." spellcheck="false"></textarea>
+        </div>
+
+        <div class="consults-card consults-opinion-card">
+          <div class="consults-card-header">
+            <div>
+              <div class="consults-card-title">Immediate Specialist Opinion</div>
+              <div class="consults-card-subtitle">AI reference only. Review clinically before acting.</div>
+            </div>
+            <div class="consults-inline-actions">
+              <button class="btn-green" id="consults-opinion-btn" onclick="getConsultOpinion()">Get Specialist Opinion</button>
+            </div>
+          </div>
+          <pre id="consults-opinion-output" class="consults-opinion-output">No specialist opinion yet.</pre>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Import & Parse -->
+<div class="view" id="view-import">
+  <div class="import-panel">
+    <div class="import-header">
+      <div>
+        <h2>Import &amp; Parse</h2>
+        <p>Paste raw EMR output, lab results, or ward rounds text. The parser extracts vitals, labs, and medications — review and correct each value before appending to a patient record.</p>
+      </div>
+    </div>
+
+    <div class="import-body">
+
+      <!-- Left column: raw input -->
+      <div class="import-input-col">
+        <div class="import-input-header">
+          <span class="import-input-label">Raw source</span>
+          <button class="btn-secondary" onclick="clearImportInput()" style="font-size:0.6rem;padding:0.2rem 0.5rem;">Clear</button>
+        </div>
+        <textarea
+          id="import-raw-input"
+          class="import-textarea"
+          spellcheck="false"
+          placeholder="Paste any clinical text here — vital signs, lab tables, medication lists, or free-text notes.
+
+Formats supported:
+
+  VS: HR 82  BP 120/80  SpO2 98%  T 37.2  RR 18
+
+  | Na  | 136 | mEq/L |
+  | K   | 4.2 | mEq/L |
+  | Cr  | 1.1 | mg/dL |
+
+  科室:HE BLOOD 採檢:2026/04/17 05:43
+  檢驗項目    檢驗值    單位    參考值
+  WBC         9.04      k/μL    3.25~9.16
+
+  Aspirin 100mg PO QD
+  Vancomycin 1g IV q12h
+  Furosemide 40mg PO BID"></textarea>
+        <div class="import-input-footer">
+          <button class="btn-primary" id="import-parse-btn" onclick="runImportParse()">Parse →</button>
+          <span class="import-hint">VS shorthand, NTUH lab tables, labelled pairs, and medication lines all work.</span>
+        </div>
+      </div>
+
+      <!-- Right column: results + append -->
+      <div class="import-results-col">
+
+        <!-- Tab bar -->
+        <div class="import-tabs">
+          <button class="import-tab active" data-tab="vitals" onclick="switchImportTab('vitals')">
+            Vitals <span id="import-tab-count-vitals" class="import-tab-count"></span>
+          </button>
+          <button class="import-tab" data-tab="labs" onclick="switchImportTab('labs')">
+            Labs <span id="import-tab-count-labs" class="import-tab-count"></span>
+          </button>
+          <button class="import-tab" data-tab="meds" onclick="switchImportTab('meds')">
+            Medications <span id="import-tab-count-meds" class="import-tab-count"></span>
+          </button>
+        </div>
+
+        <!-- Vitals tab -->
+        <div class="import-tab-panel active" id="import-tab-panel-vitals">
+          <div id="import-vitals-content" class="import-empty">Parse some data to see results.</div>
+        </div>
+
+        <!-- Labs tab -->
+        <div class="import-tab-panel" id="import-tab-panel-labs">
+          <div id="import-labs-content" class="import-empty">Parse some data to see results.</div>
+        </div>
+
+        <!-- Medications tab -->
+        <div class="import-tab-panel" id="import-tab-panel-meds">
+          <div id="import-meds-content" class="import-empty">Parse some data to see results.</div>
+        </div>
+
+        <!-- Append bar -->
+        <div class="import-append-bar">
+          <div class="import-append-row">
+            <select id="import-patient-select" class="import-select"></select>
+            <select id="import-category-select" class="import-select">
+              <option value="Vitals &amp; Labs">Vitals &amp; Labs</option>
+              <option value="Vital Signs">Vital Signs</option>
+              <option value="Labs">Labs</option>
+              <option value="Medications">Medications</option>
+              <option value="Clinical Note">Clinical Note</option>
+            </select>
+          </div>
+          <div class="import-append-row">
+            <button class="btn-primary" id="import-append-btn" onclick="appendImportToRecord()" disabled>
+              Append to Record
+            </button>
+            <div class="consults-status" id="import-status"></div>
+          </div>
+          <div id="import-review-panel" class="import-review-panel" hidden></div>
+        </div>
+
+      </div><!-- /.import-results-col -->
+    </div><!-- /.import-body -->
+  </div><!-- /.import-panel -->
+</div><!-- #view-import -->
+
+
+</div><!-- /#views-wrapper -->
+
+<!-- Drug detail side panel — global, works from any view -->
+<div id="drug-panel"></div>
+
+<!-- Shared patient context side panel -->
+<div id="patient-context-panel">
+  <div class="pc-header">
+    <div class="pc-header-info">
+      <div class="pc-title" id="patient-context-title">Quick Context</div>
+      <div class="pc-subtitle" id="patient-context-subtitle">Compact preview for the active patient.</div>
+    </div>
+    <button class="pc-close" onclick="closePatientContextDrawer()">✕</button>
+  </div>
+  <div class="pc-body" id="patient-context-body">
+    <div class="pc-empty">No active patient selected.</div>
+  </div>
+</div>
+
+
+</div><!-- /.main -->
+
+<!-- Settings Modal -->
+<div class="settings-overlay" id="settings-overlay" onclick="if(event.target===this)closeSettings()">
+  <div class="settings-modal">
+    <div class="settings-modal-header">
+      <h3>&#9881; Settings</h3>
+      <button class="settings-modal-close" onclick="closeSettings()" title="Close">&times;</button>
+    </div>
+    <div class="settings-modal-body">
+      <div class="settings-field">
+        <label>AI Access</label>
+        <p class="field-hint">
+          Static demo mode uses canned responses. No API key is accepted or needed.
+        </p>
+        <div class="settings-input-row" style="margin-top:0.5rem;">
+          <input type="password" id="settings-api-key" placeholder="Demo uses canned responses" disabled autocomplete="off" spellcheck="false">
+          <button onclick="toggleKeyVisibility()" id="settings-eye-btn" title="Show/hide key">&#128065;</button>
+        </div>
+      </div>
+      <div class="settings-field">
+        <label>Project AI Model</label>
+        <p class="field-hint">
+          This model selection applies project-wide, including Handoff generation and the Admissions parser.
+        </p>
+        <div class="settings-input-row" style="margin-top:0.5rem;">
+          <select id="settings-ai-model">
+            <option value="anthropic/claude-sonnet-4.6">Claude Sonnet 4.6</option>
+            <option value="anthropic/claude-sonnet-4.5">Claude Sonnet 4.5</option>
+            <option value="openai/gpt-5.4">GPT-5.4</option>
+            <option value="google/gemini-3.1-pro-preview">Gemini 3.1 Pro</option>
+          </select>
+          <button class="settings-save-btn" onclick="saveAiSettings()">Save</button>
+        </div>
+        <div class="settings-input-row" style="margin-top:0.4rem;">
+          <button onclick="testApiKey()" style="font-size:0.62rem;">Test Connection</button>
+          <button onclick="clearApiKey()" style="font-size:0.62rem; color:var(--red); border-color:var(--red);">Remove Key</button>
+        </div>
+        <div class="settings-status" id="settings-status"></div>
+        <div class="api-key-indicator" id="api-key-indicator"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="shortcut-help-overlay" id="shortcut-help-overlay" onclick="if (event.target === this) closeShortcutHelp()">
+  <div class="shortcut-help-modal" role="dialog" aria-modal="true" aria-labelledby="shortcut-help-title">
+    <div class="shortcut-help-header">
+      <h3 id="shortcut-help-title">Keyboard Shortcuts</h3>
+      <button class="shortcut-help-close" onclick="closeShortcutHelp()" title="Close">&times;</button>
+    </div>
+    <div class="shortcut-help-body">
+      <div class="shortcut-help-grid">
+        <div class="shortcut-help-row"><span class="shortcut-help-keys">Alt+1</span><span>Handoff Tool</span></div>
+        <div class="shortcut-help-row"><span class="shortcut-help-keys">Alt+2</span><span>Admissions</span></div>
+        <div class="shortcut-help-row"><span class="shortcut-help-keys">Alt+3</span><span>PHI Remover</span></div>
+        <div class="shortcut-help-row"><span class="shortcut-help-keys">Alt+4</span><span>Calculator</span></div>
+        <div class="shortcut-help-row"><span class="shortcut-help-keys">Alt+5</span><span>Ward Board</span></div>
+        <div class="shortcut-help-row"><span class="shortcut-help-keys">Alt+6</span><span>Antibiotics</span></div>
+        <div class="shortcut-help-row"><span class="shortcut-help-keys">Alt+7</span><span>Medication</span></div>
+        <div class="shortcut-help-row"><span class="shortcut-help-keys">Alt+8</span><span>Consults</span></div>
+        <div class="shortcut-help-row"><span class="shortcut-help-keys">Alt+9</span><span>Patient Context</span></div>
+        <div class="shortcut-help-row"><span class="shortcut-help-keys">Alt+0 / ?</span><span>Open shortcut help</span></div>
+        <div class="shortcut-help-row"><span class="shortcut-help-keys">Esc</span><span>Close help or settings</span></div>
+        <div class="shortcut-help-row"><span class="shortcut-help-keys">Ctrl/Cmd+[</span><span>Toggle sidebar</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<script src="static/data/abx-data.js?v=demo"></script>
+<script src="demo-fixtures.js"></script>
+<script src="demo-api.js"></script>
+<script src="static/data/drug-data.js?v=demo"></script>
+
+<script>
+window.PORTAL_CONFIG = {
+  showLocalAbxNotes: false,
+  localAbxNotesTitle: "",
+  showLocalDrugNotes: false,
+  localDrugNotesTitle: "",
+};
+const PORTAL_CONFIG = window.PORTAL_CONFIG;
+</script>
+<script src="static/js/portal-shell.js?v=demo"></script>
+<script src="static/js/portal-phi.js?v=demo"></script>
+<script src="static/js/portal-safety-rules.js?v=demo"></script>
+<script src="static/js/portal-patient-context-insight.js?v=demo"></script>
+<script src="static/js/portal-patient-context-fetch.js?v=demo"></script>
+<script src="static/js/portal-patient-context-render.js?v=demo"></script>
+<script src="static/js/portal-patient-context.js?v=demo"></script>
+<script src="static/js/portal-calculators.js?v=demo"></script>
+<script src="static/js/portal-consults.js?v=demo"></script>
+<script src="static/js/portal-abx.js?v=demo"></script>
+<script src="static/js/portal-drugs.js?v=demo"></script>
+<script src="static/js/portal-music.js?v=demo"></script>
+<script src="static/js/portal-nav.js?v=demo"></script>
+<script src="static/js/portal-ward.js?v=demo"></script>
+<script src="static/js/portal-vitals.js?v=demo"></script>
+<script src="static/js/portal-pending.js?v=demo"></script>
+<script src="static/js/portal-todos.js?v=demo"></script>
+<script src="static/js/portal-patient-watch-rules.js?v=demo"></script>
+<script src="static/js/portal-meta.js?v=demo"></script>
+<script src="static/js/portal-io.js?v=demo"></script>
+<script src="static/js/portal-rules.js?v=demo"></script>
+<script src="static/js/portal-import.js?v=demo"></script>
+<script src="static/js/portal-ekg-wizard.js?v=demo"></script>
+<script src="demo-mode.js"></script>
+</body>
+</html>
