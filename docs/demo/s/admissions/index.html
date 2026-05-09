@@ -1,20 +1,725 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admissions Demo Placeholder</title>
+  <meta charset="UTF-8" />
+  <title>Admissions</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <script>
+    // Apply stored theme immediately to prevent flash
+    (function () {
+      var t = localStorage.getItem('medical-portal-theme') || 'light';
+      document.documentElement.setAttribute('data-theme', t);
+    })();
+  </script>
   <style>
-    body { margin:0; min-height:100vh; display:grid; place-items:center; font-family:'IBM Plex Mono', monospace; background:#f8fafc; color:#1e293b; }
-    section { max-width:680px; padding:28px; border:1px solid #d8e4e1; border-radius:8px; background:#fff; }
-    h1 { margin:0 0 10px; font-size:1.4rem; }
-    p { color:#64748b; line-height:1.65; font-size:0.85rem; }
-  </style>
+  .admissions-demo-banner {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 99999;
+    min-height: 34px;
+    padding: 9px 18px;
+    background: #0f766e;
+    color: #fff;
+    font: 600 12px/1.35 'IBM Plex Mono', monospace;
+    text-align: center;
+  }
+  body {
+    padding-top: 34px;
+  }
+</style>
+<script>
+(function () {
+  const demoNote = "72F presents with 3 days of fever, productive cough, and mild dyspnea. History includes hypertension, CKD stage 3, and type 2 diabetes. No known drug allergies. On arrival: T 38.4 C, HR 108, BP 132/74, RR 22, SpO2 91% on room air improving to 95% on nasal cannula 2 L/min. Exam shows right basilar crackles and dry mucous membranes. Labs: WBC 14.8, Hgb 10.9, Plt 220, Na 134, K 4.7, HCO3 20, BUN 42, Cr 2.0 from baseline 1.4, glucose 186, CRP 96. CXR shows right lower-lobe opacity. Impression: community-acquired pneumonia with prerenal AKI on CKD. Plan: blood cultures, sputum culture, ceftriaxone plus doxycycline, cautious fluids, hold metformin during AKI, monitor BMP and oxygen requirement.";
+  const cannedPayload = {"id": "chatcmpl-demo-static", "object": "chat.completion", "choices": [{"index": 0, "finish_reason": "stop", "message": {"role": "assistant", "content": "{\"chief_complaint\": \"Fever, productive cough, and mild dyspnea for 3 days\", \"age_sex\": \"72F\", \"patient_narrative\": \"Synthetic patient admitted with community-acquired pneumonia complicated by mild hypoxemia and prerenal AKI on CKD3.\", \"past_medical_history\": \"Hypertension; CKD stage 3; type 2 diabetes\", \"past_surgical_history\": \"No prior major surgery reported in demo note\", \"hospitalization_history\": \"No recent hospitalization reported in demo note\", \"medication_allergy\": \"No known drug allergies\", \"device_allergy\": \"No device allergy reported\", \"current_medications\": \"Metformin 500 mg PO BID; losartan 50 mg PO daily\", \"family_history\": \"Noncontributory in demo note\", \"social_history\": \"Lives independently; no tobacco or alcohol details provided\", \"tocc\": \"No travel, occupation, cluster, or contact exposure reported in demo note\", \"vitals\": \"T 38.4 C, HR 108, BP 132/74, RR 22, SpO2 91% RA -> 95% on NC 2 L/min\", \"physical_exam\": \"Right basilar crackles, dry mucous membranes, no severe respiratory distress\", \"diagnosis_active\": \"Community-acquired pneumonia; acute kidney injury on CKD3; mild hypoxemia\", \"diagnosis_underlying\": \"Hypertension; type 2 diabetes; CKD stage 3\", \"soap_o_lab\": \"WBC 14.8, Hgb 10.9, Plt 220, Na 134, K 4.7, HCO3 20, BUN 42, Cr 2.0, glucose 186, CRP 96. CXR: right lower-lobe opacity.\", \"soap_a_active\": \"CAP is likely source of fever and hypoxemia. AKI appears prerenal in setting of infection and reduced intake.\", \"soap_a_underlying\": \"CKD and diabetes increase risk from infection and require renal medication review.\", \"soap_plan\": \"Obtain blood and sputum cultures. Start ceftriaxone plus doxycycline. Provide oxygen and cautious IV fluids. Hold metformin during AKI. Trend BMP, fever curve, oxygen need, and cultures.\", \"treatment_goal\": \"Stabilize respiratory status, treat pneumonia, recover kidney function, and transition safely to oral therapy/discharge plan.\"}"}}], "usage": {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}};
+  try {
+    localStorage.setItem('medical-portal-api-key', 'demo-static-key');
+    localStorage.setItem('medical-portal-ai-model', 'openai/gpt-4.1-mini');
+  } catch (err) {}
+  const originalFetch = window.fetch ? window.fetch.bind(window) : null;
+  window.fetch = async function admissionsDemoFetch(input, init) {
+    const raw = typeof input === 'string' ? input : (input && input.url) || '';
+    if (raw.includes('admissions-canned-ai')) {
+      return new Response(JSON.stringify(cannedPayload), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }
+      });
+    }
+    if (originalFetch) return originalFetch(input, init);
+    return new Response('Not found', { status: 404 });
+  };
+  function lockDownAdmissions() {
+    if (!document.querySelector('.admissions-demo-banner')) {
+      const banner = document.createElement('div');
+      banner.className = 'admissions-demo-banner';
+      banner.textContent = 'Demo mode: synthetic admission text, pre-generated AI parse, no real uploads or API calls.';
+      document.body.insertBefore(banner, document.body.firstChild);
+    }
+    const aiInput = document.getElementById('aiInputArea');
+    if (aiInput && !aiInput.value.trim()) aiInput.value = demoNote;
+    const apiKeySetup = document.getElementById('apiKeySetup');
+    if (apiKeySetup) apiKeySetup.textContent = 'Demo mode uses a pre-generated synthetic AI parse. No API key is accepted or needed.';
+    const parseBtn = document.getElementById('parseBtn');
+    if (parseBtn) {
+      parseBtn.disabled = false;
+      parseBtn.title = 'Returns a canned synthetic parse in static demo mode.';
+    }
+    ['imageInput', 'cameraInput'].forEach((id) => {
+      const input = document.getElementById(id);
+      if (input) input.disabled = true;
+    });
+    ['imageUploadBtn', 'voiceBtn'].forEach((id) => {
+      const btn = document.getElementById(id);
+      if (btn) {
+        btn.disabled = true;
+        btn.title = 'Disabled in the public static demo.';
+        btn.style.opacity = '0.55';
+      }
+    });
+    const uploadSection = document.getElementById('imageUploadSection');
+    if (uploadSection) uploadSection.style.opacity = '0.55';
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => setTimeout(lockDownAdmissions, 150));
+  } else {
+    setTimeout(lockDownAdmissions, 150);
+  }
+})();
+</script>
+
+<script type="module" crossorigin>var ve=Object.defineProperty;var Ie=(e,t,i)=>t in e?ve(e,t,{enumerable:!0,configurable:!0,writable:!0,value:i}):e[t]=i;var I=(e,t,i)=>Ie(e,typeof t!="symbol"?t+"":t,i);(function(){const t=document.createElement("link").relList;if(t&&t.supports&&t.supports("modulepreload"))return;for(const a of document.querySelectorAll('link[rel="modulepreload"]'))r(a);new MutationObserver(a=>{for(const l of a)if(l.type==="childList")for(const u of l.addedNodes)u.tagName==="LINK"&&u.rel==="modulepreload"&&r(u)}).observe(document,{childList:!0,subtree:!0});function i(a){const l={};return a.integrity&&(l.integrity=a.integrity),a.referrerPolicy&&(l.referrerPolicy=a.referrerPolicy),a.crossOrigin==="use-credentials"?l.credentials="include":a.crossOrigin==="anonymous"?l.credentials="omit":l.credentials="same-origin",l}function r(a){if(a.ep)return;a.ep=!0;const l=i(a);fetch(a.href,l)}})();const d={STORAGE_KEYS:{DATA:"admissionNoteData_AI",BACKGROUND:"admissionNoteBackground",API_KEY:"medical-portal-api-key",MODEL:"medical-portal-ai-model"},API:{BASE_URL:"./admissions-canned-ai",MODEL:"anthropic/claude-sonnet-4.6",MAX_OUTPUT_TOKENS:8192,TEMPERATURE:.1},RETRY:{MAX_ATTEMPTS:3,INITIAL_DELAY_MS:1e3,MAX_DELAY_MS:1e4,BACKOFF_MULTIPLIER:2},VOICE:{LANGUAGES:{CHINESE:"zh-TW",ENGLISH:"en-US"},DEFAULT_LANGUAGE:"zh-TW"},UI:{TOAST_DURATION_MS:2e3,STATUS_HIDE_DELAY_MS:3e3,MODAL_ANIMATION_MS:300,DEBOUNCE_DELAY_MS:500}},Ae=`Parse clinical notes to JSON for demo EMR. Output in ENGLISH only (translate Chinese if needed). Use null for missing info.
+
+IMPORTANT - NO ABBREVIATIONS: Always expand medical abbreviations to full terms. Examples:
+- HTN → Hypertension
+- DM → Diabetes Mellitus
+- CAD → Coronary Artery Disease
+- N/V → Nausea/Vomiting
+- ABx → Antibiotics
+- Rx → Treatment/Prescription
+- Hx → History
+- Dx → Diagnosis
+
+
+IMPORTANT: If an image is provided, first extract ALL text from the image (including handwritten notes). The image may contain handwritten clinical notes - carefully read and transcribe everything visible. Then parse the combined text content.
+
+Extract these fields:
+- chief_complaint: brief chief complaint for admission
+- age_sex: format as "*49M" or "*65F" (asterisk + age + sex)
+- patient_narrative: format as "This is a XX-year-old male/female with underlying disease of\\n#. Disease 1\\n#. Disease 2\\n\\nThe patient was..."
+- past_medical_history: numbered list with #. prefix
+- past_surgical_history: format as "YYYY_MM_DD  Procedure name"
+- hospitalization_history: format as "入院日期:YYYY_MM_DD 出院日期:YYYY_MM_DD 診斷:..."
+- medication_allergy: {denied: boolean, details: string}
+- current_medications: string
+- family_history: {HTN, DM, DLP, Cancer, CAD, details}
+- social_history: {alcohol, smoking, betel} - use "denied" or describe
+- tocc: {travel, occupation, contact, cluster}
+- vitals: {temperature, pulse, respiration, bp, height, weight, pain}
+- physical_exam: {general, consciousness, chest, heart, abdomen, extremities, neurological, local_findings}
+
+Generate Tentative Diagnosis (臆斷):
+- diagnosis_active: format as "[Active]\\n#. Main problem for admission\\n- status post treatment if any"
+- diagnosis_underlying: format as "[Underlying]\\n#. Condition 1\\n#. Condition 2"
+
+Generate SOAP for Medical Needs and Care Plan (醫療需求與治療計畫):
+- soap_s: chief complaint in bullet format "- symptom noted during..."
+- soap_o_general: format as "[General]\\n- code : full/aggressive\\n- vital signs: stable/unstable\\n- Consciousness: E4V5M6"
+- soap_o_local: "[Local findings]\\n- describe relevant findings"
+- soap_o_lab: "[lab]\\n- Hemogram: ...\\n- BCS: ..."
+- soap_o_image: "[image]\\n- CXR (-)\\n- ECG : NSR"
+- soap_a_active: same as diagnosis_active
+- soap_a_underlying: same as diagnosis_underlying
+- soap_plan: format as "- treatment step 1\\n- treatment step 2\\n- monitoring plan"
+- treatment_goal: "- goal description"
+
+Notes:
+{{CLINICAL_NOTES}}
+
+Return only valid JSON.`;class W extends Error{constructor(i,r,a=null){super(i);I(this,"code");I(this,"details");I(this,"timestamp");this.name="AppError",this.code=r,this.details=a,this.timestamp=new Date().toISOString()}}class q extends W{constructor(i,r,a=null){super(i,"API_ERROR",{statusCode:r,response:a});I(this,"statusCode");this.name="ApiError",this.statusCode=r}}class se extends W{constructor(t,i=null){super(t,"NETWORK_ERROR",{originalError:i?.message}),this.name="NetworkError"}}class Se extends W{constructor(t,i=null){super(t,"VALIDATION_ERROR",{field:i}),this.name="ValidationError"}}const R={400:"Invalid request. Please check your input and try again.",401:"Invalid API key. Please check your OpenRouter API key.",403:"Access denied. Your API key may not have the required permissions.",404:"API endpoint not found. The service may be temporarily unavailable.",429:"Rate limit exceeded. Please wait a moment before trying again.",500:"Server error. The AI service is experiencing issues.",502:"Bad gateway. The AI service is temporarily unavailable.",503:"Service unavailable. Please try again later.",NETWORK_ERROR:"Network error. Please check your internet connection.",OFFLINE:"You appear to be offline. Please check your connection.",UNKNOWN:"An unexpected error occurred. Please try again."},Te="An unexpected error occurred. Please try again.";function ge(e){return e instanceof q?R[e.statusCode]??R.UNKNOWN??Te:e instanceof se?navigator.onLine?R.NETWORK_ERROR:R.OFFLINE:(e instanceof Se||e instanceof Error)&&e.message||R.UNKNOWN}function he(e,t={}){const i=e instanceof W?{name:e.name,message:e.message,code:e.code}:{name:e.name,message:e.message};console.error("[AdmissionNoteBuilder Error]",{...i,context:t,timestamp:new Date().toISOString()})}function be(e){return e instanceof se?!0:e instanceof q?[429,500,502,503].includes(e.statusCode):!1}function Re(e,t){return Math.min(t.INITIAL_DELAY_MS*Math.pow(t.BACKOFF_MULTIPLIER,e),t.MAX_DELAY_MS)+Math.random()*1e3}function n(e,t="N/A"){const i=document.getElementById(e);return i&&i.value.trim()?i.value.trim():t}function P(e){const t=document.getElementById(e);return t&&t.checked?"■":"□"}function Ce(e,t){let i=null;return function(...r){i&&clearTimeout(i),i=setTimeout(()=>e.apply(this,r),t)}}function xe(e){return e?e.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;"):""}function Ne(e){return new Promise(t=>setTimeout(t,e))}function Le(){return navigator.onLine}function Oe(e,t){try{return JSON.parse(e)}catch{return t}}function Pe(e){try{return JSON.parse(e),!0}catch{return!1}}function we(e){let t=e,i=0,r=0,a=!1,l=!1;for(let u=0;u<t.length;u++){const m=t[u];if(l){l=!1;continue}if(m==="\\"){l=!0;continue}if(m==='"'){a=!a;continue}a||(m==="{"?i++:m==="}"?i--:m==="["?r++:m==="]"&&r--)}if(a){const u=t.lastIndexOf('"');if(u>0){const m=t.substring(0,u).trim();m.endsWith(":")||m.endsWith(",")||m.endsWith("[")?t=t.substring(0,u)+"null":t=t.substring(0,u+1)}}i=0,r=0,a=!1,l=!1;for(let u=0;u<t.length;u++){const m=t[u];if(l){l=!1;continue}if(m==="\\"){l=!0;continue}if(m==='"'){a=!a;continue}a||(m==="{"?i++:m==="}"?i--:m==="["?r++:m==="]"&&r--)}for(;r>0;)t+="]",r--;for(;i>0;)t+="}",i--;return t!==e&&console.log("[JSON Repair] Applied truncation repair"),t}function Me(e){let t=e;return e.includes("```json")?t=e.split("```json")[1]?.split("```")[0]??e:e.includes("```")&&(t=e.split("```")[1]?.split("```")[0]??e),t=t.trim(),Pe(t)||(t=we(t)),t}function X(e,t){try{localStorage.setItem(e,typeof t=="object"?JSON.stringify(t):String(t))}catch(i){he(i,{key:e})}}function J(e,t){try{const i=localStorage.getItem(e);if(i===null)return t;const r=Oe(i,null);return r!==null?r:i}catch{return t}}function oe(e){try{localStorage.removeItem(e)}catch{}}const Z={save(e){const t={};e.forEach(i=>{i.id&&(t[i.id]=i.type==="checkbox"?i.checked:i.value)}),X(d.STORAGE_KEYS.DATA,t)},load(e){const t=J(d.STORAGE_KEYS.DATA,null);return t?(e.forEach(i=>{i.id&&t[i.id]!==void 0&&(i.type==="checkbox"?i.checked=t[i.id]:i.value=t[i.id])}),!0):!1},clear(){oe(d.STORAGE_KEYS.DATA)}},B={save(e){X(d.STORAGE_KEYS.API_KEY,e)},get(){return J(d.STORAGE_KEYS.API_KEY,null)},clear(){oe(d.STORAGE_KEYS.API_KEY)},exists(){return!!this.get()}},fe={save(e){X(d.STORAGE_KEYS.MODEL,e)},get(){return J(d.STORAGE_KEYS.MODEL,d.API.MODEL)},init(){const e=this.get()}},ee={save(e){X(d.STORAGE_KEYS.BACKGROUND,e)},get(){return J(d.STORAGE_KEYS.BACKGROUND,null)},clear(){oe(d.STORAGE_KEYS.BACKGROUND)},apply(e){const t=this.get();t&&(e.style.backgroundImage=`url(${t})`)}},V={currentImage:null,setImage(e,t,i){this.currentImage={base64:e,mimeType:t,fileName:i}},clear(){this.currentImage=null},hasImage(){return this.currentImage!==null},getImage(){return this.currentImage}};async function ke(e,t={}){const{onStatus:i,onSuccess:r,onError:a}=t,l=B.get(),u=V.hasImage(),m=e?.trim();if(!l)return i?.("Please enter your OpenRouter API key first.","error"),null;if(!m&&!u)return i?.("Please enter some notes or upload an image to parse.","error"),null;const $=fe.get(),D=d.API.BASE_URL,x=[],U=m?e:"(See attached image for clinical notes)";if(x.push({type:"text",text:Ae.replace("{{CLINICAL_NOTES}}",U)}),u){const h=V.getImage();h&&x.push({type:"image_url",image_url:{url:`data:${h.mimeType};base64,${h.base64}`}})}const z={model:$,messages:[{role:"user",content:x}],max_tokens:d.API.MAX_OUTPUT_TOKENS,temperature:d.API.TEMPERATURE};let w=null;for(let h=0;h<d.RETRY.MAX_ATTEMPTS;h++)try{const A=u?h===0?"Parsing image and notes with AI... This may take a few seconds.":`Retrying... (attempt ${h+1}/${d.RETRY.MAX_ATTEMPTS})`:h===0?"Parsing with AI... This may take a few seconds.":`Retrying... (attempt ${h+1}/${d.RETRY.MAX_ATTEMPTS})`;if(i?.(A,"loading"),!Le())throw new se("You appear to be offline.");const _=await fetch(D,{method:"POST",headers:{"Content-Type":"application/json",Authorization:`Bearer ${l}`,"HTTP-Referer":window.location.origin,"X-Title":"Admission Note Builder"},body:JSON.stringify(z)});if(!_.ok){let b=null;try{b=await _.json()}catch{}throw new q(b?.error?.message||`API request failed: ${_.status}`,_.status,b)}const p=await _.json();if(console.log("[OpenRouter Response]",JSON.stringify(p,null,2)),p.error)throw new q(p.error.message,typeof p.error.code=="number"?p.error.code:500);const Y=p.choices?.[0],T=Y?.finish_reason;T&&T!=="stop"&&(console.warn("[OpenRouter] Finish reason:",T),T==="length"&&console.warn("[OpenRouter] Response was truncated due to max tokens limit"));const K=Y?.message?.content;if(!K)throw console.error("[OpenRouter] No text found in response. Full response:",p),new Error("Empty response from AI. The model returned no text content.");const M=JSON.parse(Me(K));return i?.("Successfully parsed and populated form fields!","success"),r?.(M),M}catch(A){if(w=A,he(A,{attempt:h,hasImage:u}),be(A)&&h<d.RETRY.MAX_ATTEMPTS-1){const _=Re(h,d.RETRY);i?.(`Rate limited. Retrying in ${Math.round(_/1e3)} seconds...`,"loading"),await Ne(_);continue}break}return i?.(ge(w),"error"),a?.(w),null}class Be{constructor(){I(this,"recognition",null);I(this,"isRecording",!1);I(this,"language",d.VOICE.DEFAULT_LANGUAGE);I(this,"callbacks",{})}init(){if(!("webkitSpeechRecognition"in window||"SpeechRecognition"in window))return!1;const t=window.SpeechRecognition||window.webkitSpeechRecognition;return t?(this.recognition=new t,this.recognition.continuous=!0,this.recognition.interimResults=!0,this.recognition.lang=this.language,this.recognition.onresult=i=>{let r="";for(let a=i.resultIndex;a<i.results.length;a++){const l=i.results[a];l?.[0]&&l.isFinal&&(r+=l[0].transcript+" ")}r&&this.callbacks.onResult?.(r)},this.recognition.onerror=i=>{this.stop();const r=this.language===d.VOICE.LANGUAGES.CHINESE;this.callbacks.onError?.(r?`語音錯誤: ${i.error}`:`Voice error: ${i.error}`)},this.recognition.onend=()=>{if(this.isRecording)try{this.recognition?.start()}catch{}},!0):!1}setCallbacks(t){this.callbacks={...this.callbacks,...t}}setLanguage(t){this.language=t,this.recognition&&(this.recognition.lang=t)}isChinese(){return this.language===d.VOICE.LANGUAGES.CHINESE}start(){if(!this.recognition&&!this.init())return this.callbacks.onError?.(this.isChinese()?"此瀏覽器不支援語音辨識。":"Voice recognition not supported."),!1;this.recognition&&(this.recognition.lang=this.language);try{return this.isRecording=!0,this.recognition?.start(),this.callbacks.onStart?.(),!0}catch{return this.isRecording=!1,!1}}stop(){if(this.isRecording=!1,this.recognition)try{this.recognition.stop()}catch{}this.callbacks.onEnd?.()}toggle(){return this.isRecording?this.stop():this.start(),this.isRecording}getIsRecording(){return this.isRecording}getButtonText(t=this.isRecording){return t?this.isChinese()?"停止錄音":"Stop":this.isChinese()?"開始錄音":"Start"}getListeningText(){return this.isChinese()?"正在聆聽...":"Listening..."}}const O=new Be,f={element:null,init(e){this.element=e},show(e,t){this.element&&(this.element.textContent=e,this.element.className=t,this.element.style.display="block")},hide(){this.element&&(this.element.className="",this.element.style.display="none")},showTimed(e,t,i=d.UI.STATUS_HIDE_DELAY_MS){this.show(e,t),setTimeout(()=>this.hide(),i)}},te={container:null,fill:null,text:null,intervalId:null,currentProgress:0,init(){this.container=document.getElementById("aiProgressContainer"),this.fill=document.getElementById("aiProgressFill"),this.text=document.getElementById("aiProgressText")},start(){this.container||this.init(),this.currentProgress=0,this.fill&&(this.fill.style.width="0%"),this.container&&(this.container.style.display="block"),this.text&&(this.text.textContent="Sending to AI...");let e=2;this.intervalId=setInterval(()=>{this.currentProgress<30?(e=3,this.text&&(this.text.textContent="Sending to AI...")):this.currentProgress<60?(e=1.5,this.text&&(this.text.textContent="AI is processing...")):this.currentProgress<85?(e=.5,this.text&&(this.text.textContent="Parsing response...")):(e=.1,this.text&&(this.text.textContent="Almost done...")),this.currentProgress=Math.min(90,this.currentProgress+e),this.fill&&(this.fill.style.width=this.currentProgress+"%")},100)},complete(){this.intervalId&&(clearInterval(this.intervalId),this.intervalId=null),this.currentProgress=100,this.fill&&(this.fill.style.width="100%"),this.text&&(this.text.textContent="Done!"),setTimeout(()=>this.hide(),1500)},error(e){this.intervalId&&(clearInterval(this.intervalId),this.intervalId=null),this.fill&&(this.fill.style.background="#dc3545"),this.text&&(this.text.textContent=e||"Error occurred"),setTimeout(()=>{this.hide(),this.fill&&(this.fill.style.background="linear-gradient(90deg, #4285f4, #34a853)")},3e3)},hide(){this.container&&(this.container.style.display="none",this.fill&&(this.fill.style.width="0%"),this.currentProgress=0)}},ie={element:null,init(e){this.element=e},show(e,t=d.UI.TOAST_DURATION_MS){this.element&&(this.element.textContent=e,this.element.classList.add("show"),setTimeout(()=>{this.element?.classList.remove("show")},t))}};async function ne(e){try{if(navigator.clipboard)return await navigator.clipboard.writeText(e),!0;const t=document.createElement("textarea");t.value=e,t.style.position="fixed",t.style.left="-9999px",document.body.appendChild(t),t.select();const i=document.execCommand("copy");return document.body.removeChild(t),i}catch{return!1}}function E(e,t,i){if(!t||t.trim()===""||t.trim()==="N/A")return;const r=document.createElement("div");r.className="output-section",r.innerHTML=`
+    <h3>${e}<button class="copy-section-btn" title="Copy">📋</button></h3>
+    <div class="output-content">${xe(t)}</div>
+  `,i.appendChild(r)}function $e(){let e=`系統性回顧(Review of Systems)
+(■: positive, □:negative)`;const t=n("ros_details","");return t&&(e+=`
+${t}
+`),document.querySelectorAll("#rosSection details").forEach(i=>{const r=i.querySelector("summary")?.textContent?.trim()||"",a=i.querySelectorAll('input[type="checkbox"]'),l=Array.from(a).map(u=>{const m=u;return`${P(m.id)} ${m.parentElement?.textContent?.trim()||""}`});e+=`
+- ${r}:
+    ${l.join(", ")}`}),e.trim()}function pe(){const e=document.getElementById("hist_med_allergy_denied")?.checked;let t=e?"No known":n("hist_med_allergy_details","")||"unknown";!e&&n("hist_med_allergy_date","")&&(t+=` (${n("hist_med_allergy_date","")})`);const r=document.getElementById("hist_device_allergy_denied")?.checked?"No known":n("hist_device_allergy_details","")||"unknown";let l=[`HTN ${P("fh_HTN")}`,`DM ${P("fh_DM")}`,`DLP ${P("fh_DLP")}`,`Cancer ${P("fh_CA")}`,`CAD ${P("fh_CAD")}`].join(", ");return n("fh_details","")&&(l+=`
+${n("fh_details","")}`),[`病史(Patient History)
+${n("patientHistoryNarrative","Not specified")}`,`[Past medical history]
+${n("hist_pmh","Not specified")}`,`[Past surgical history]
+${n("hist_surgical_history_detailed","denied")}`,`[Hospitalization]
+${n("hist_hospitalization_history","denied")}`,`Current Medication:
+demo hospital: ${n("hist_current_med_ntuh","nil")}
+Other: ${n("hist_current_med_other","denied")}
+中草藥: ${n("hist_current_med_tcm","denied")}
+保健食品: ${n("hist_current_med_supplements","denied")}`,`Allergy:
+- Medication Allergy: ${t}
+- Medication ADR: ${n("hist_med_adr","unknown")}
+- Device/Material Allergy: ${r}`,`Family History:
+${l}`,`TOCC:
+- Travel: ${n("hist_tocc_travel","denied")}
+- Occupation: ${n("hist_tocc_occupation","N/A")}
+- Cluster/Contact: ${n("hist_tocc_cluster","denied")}`,`Social History:
+- Alcohol: ${n("hist_abc_alcohol","denied")}
+- Betel: ${n("hist_abc_betel","denied")}
+- Smoking: ${n("hist_abc_smoking","denied")}`].join(`
+
+`)}function De(){let e=`BH: ${n("vitals_bh","--")} cm, BW: ${n("vitals_bw","--")} kg
+`;return e+=`T: ${n("vitals_t","--")}°C, P: ${n("vitals_p","--")} bpm, R: ${n("vitals_r","--")}/min
+`,e+=`BP: ${n("vitals_bp","--/--")} mmHg, Pain: ${n("vitals_pain","0")}
+
+`,n("pe_details","")&&(e+=n("pe_details","")+`
+
+`),e+=`[Neurological]
+`,e+=`- Consciousness: ${n("pe_neuro_conscious","E4V5M6")}
+`,e+=`- Muscle power: ${n("pe_neuro_power","intact")}
+`,e+=`- Gait: ${n("pe_neuro_gait","steady")}`,e}function Ue(){return`${n("plan_age_sex","*--")}
+
+S:
+- ${n("ccpi","Not specified")}
+
+O:
+[General]
+- Consciousness: ${n("pe_neuro_conscious","E4V5M6")}
+
+[PE]
+${n("plan_pe_findings","See PE section")}
+
+[lab]
+${n("plan_lab_data","- pending")}
+
+[image]
+- CXR ${n("plan_cxr_date","")}: ${n("plan_cxr_interp","(-)")}
+- ECG ${n("plan_ekg_date","")}: ${n("plan_ekg_interp","NSR")}
+
+A:
+[Active]
+${n("plan_assessment_active",n("diagnosis_active","Not specified"))}
+
+[Underlying]
+${n("plan_assessment_underlying",n("diagnosis_underlying","Not specified"))}
+
+P:
+${n("plan_plan","- symptomatic treatment")}
+
+Treatment goal:
+- ${n("plan_treatment_goal","clinical stability")}`}function Ye(e){e.innerHTML="",E("主訴(Chief Complaint)",`Informant: ${n("informant","patient and EMR")}
+${n("ccpi","Not specified")}`,e),E("病史(Patient History)",pe(),e),E("社會心理相關評估(Psychosocial Assessment)",n("psychosocial_assessment","pending"),e),E("系統性回顧(Review of Systems)",$e(),e),E("身體診察(Physical Examination)",De(),e),E("影像報告(Imaging Report)",n("imaging_report","nil"),e),E("病理報告(Pathology Report)",n("pathology_report","nil"),e),E("臆斷(Tentative Diagnosis)",`[Active]
+${n("diagnosis_active","Not specified")}
+
+[Underlying]
+${n("diagnosis_underlying","Not specified")}`,e),E("醫療需求與治療計畫(Medical Needs and Care Plan)",Ue(),e),E("出院規劃(Discharge Planning)",`管路留置狀況：${n("dp_catheter","Nil")}
+日常生活功能分數：${n("dp_adl","100")}
+預期出院後居住場所：${n("dp_residence","與家人同住")}
+預期出院後主要照顧者：${n("dp_caregiver","自己")}
+出院規劃收案篩檢：${n("dp_screening","一般病患")}`,e)}function c(e,t){if(t==null)return;const i=document.getElementById(e);i&&(i.value=t,i.classList.add("ai-populated"),i.dispatchEvent(new Event("input",{bubbles:!0})))}function C(e,t){if(t==null)return;const i=document.getElementById(e);i&&(i.checked=t,i.dispatchEvent(new Event("change",{bubbles:!0})))}function Ke(e,t){const i=[e,t].map(r=>(r||"").trim()).filter(Boolean);return i.length===0?"":i.length===1?i[0]||"":`Cluster: ${i[0]}; Contact: ${i[1]}`}function Ge(e){if(e){if(e.chief_complaint&&c("ccpi",e.chief_complaint),e.age_sex&&c("plan_age_sex",e.age_sex),e.patient_narrative&&c("patientHistoryNarrative",e.patient_narrative),e.past_medical_history&&c("hist_pmh",e.past_medical_history),e.past_surgical_history&&c("hist_surgical_history_detailed",e.past_surgical_history),e.hospitalization_history&&c("hist_hospitalization_history",e.hospitalization_history),e.medication_allergy?.denied?C("hist_med_allergy_denied",!0):e.medication_allergy?.details&&c("hist_med_allergy_details",e.medication_allergy.details),e.device_allergy?.denied?C("hist_device_allergy_denied",!0):e.device_allergy?.details&&c("hist_device_allergy_details",e.device_allergy.details),e.current_medications&&c("hist_current_med_other",e.current_medications),e.family_history&&(C("fh_HTN",e.family_history.HTN),C("fh_DM",e.family_history.DM),C("fh_DLP",e.family_history.DLP),C("fh_CA",e.family_history.Cancer),C("fh_CAD",e.family_history.CAD),e.family_history.details&&c("fh_details",e.family_history.details)),e.social_history&&(e.social_history.alcohol&&c("hist_abc_alcohol",e.social_history.alcohol),e.social_history.smoking&&c("hist_abc_smoking",e.social_history.smoking),e.social_history.betel&&c("hist_abc_betel",e.social_history.betel)),e.tocc){e.tocc.travel&&c("hist_tocc_travel",e.tocc.travel),e.tocc.occupation&&c("hist_tocc_occupation",e.tocc.occupation);const t=Ke(e.tocc.cluster,e.tocc.contact);t&&c("hist_tocc_cluster",t)}if(e.vitals&&(e.vitals.temperature&&c("vitals_t",e.vitals.temperature),e.vitals.pulse&&c("vitals_p",e.vitals.pulse),e.vitals.respiration&&c("vitals_r",e.vitals.respiration),e.vitals.bp&&c("vitals_bp",e.vitals.bp),e.vitals.height&&c("vitals_bh",e.vitals.height),e.vitals.weight&&c("vitals_bw",e.vitals.weight),e.vitals.pain&&c("vitals_pain",e.vitals.pain)),e.physical_exam){const t=[];e.physical_exam.general&&t.push(`General: ${e.physical_exam.general}`),e.physical_exam.chest&&t.push(`Chest: ${e.physical_exam.chest}`),e.physical_exam.heart&&t.push(`Heart: ${e.physical_exam.heart}`),e.physical_exam.abdomen&&t.push(`Abdomen: ${e.physical_exam.abdomen}`),e.physical_exam.extremities&&t.push(`Extremities: ${e.physical_exam.extremities}`),e.physical_exam.local_findings&&t.push(`Local findings: ${e.physical_exam.local_findings}`),t.length>0&&c("pe_details",t.join(`
+`)),e.physical_exam.consciousness&&c("pe_neuro_conscious",e.physical_exam.consciousness)}e.diagnosis_active&&c("diagnosis_active",e.diagnosis_active.replace(/\[Active\]\n?/g,"")),e.diagnosis_underlying&&c("diagnosis_underlying",e.diagnosis_underlying.replace(/\[Underlying\]\n?/g,"")),e.soap_o_lab&&c("plan_lab_data",e.soap_o_lab.replace(/\[lab\]\n?/g,"")),e.soap_a_active&&c("plan_assessment_active",e.soap_a_active.replace(/\[Active\]\n?/g,"")),e.soap_a_underlying&&c("plan_assessment_underlying",e.soap_a_underlying.replace(/\[Underlying\]\n?/g,"")),e.soap_plan&&c("plan_plan",e.soap_plan),e.treatment_goal&&c("plan_treatment_goal",e.treatment_goal.replace(/^- /,""))}}window.addEventListener("message",e=>{e.data?.type==="theme-change"&&e.data.theme&&(document.documentElement.setAttribute("data-theme",e.data.theme),localStorage.setItem("medical-portal-theme",e.data.theme))});try{window.parent.postMessage({type:"theme-request"},"*")}catch{}document.addEventListener("DOMContentLoaded",()=>{const e=document.getElementById("sectionsContainer"),t=document.getElementById("blockContainer");if(!e||!t){console.error("Required container elements not found");return}const i=e,r=t,a=Array.from(i.querySelectorAll("input, textarea")),l=Array.from(i.querySelectorAll("section")),u={},m=document.getElementById("modalOverlay"),$=document.getElementById("modalBody"),D=document.getElementById("modalClose"),x=document.getElementById("noteOutput");if(!m||!$||!D||!x){console.error("Required modal elements not found");return}const U=m,z=$,w=D,h=x,A=document.getElementById("aiStatus"),_=document.getElementById("copy-toast");A&&f.init(A),_&&ie.init(_);function p(s){const o=document.getElementById("aiPanel"),g=document.getElementById("outputPanel");o&&o.classList.remove("active"),g&&g.classList.remove("active"),l.forEach(L=>L.classList.remove("active"));const v=document.getElementById(s);v&&v.classList.add("active"),document.querySelectorAll(".adm-nav-item").forEach(L=>{L.classList.toggle("active",L.dataset.target===s)});const S=document.getElementById("adm-main");S&&(S.scrollTop=0)}document.querySelectorAll(".adm-nav-item").forEach(s=>{s.addEventListener("click",()=>{const o=s.dataset.target;o&&p(o)})}),l.forEach(s=>{const o=document.createElement("div");o.className="block",o.dataset.sectionId=s.id,o.innerHTML=`<h2>${s.dataset.title||"Section"}</h2>`,r.appendChild(o),u[s.id]=o});function Y(s){p(s)}function T(){const s=z.querySelector("section");s&&i.appendChild(s),p("aiPanel"),b()}r.addEventListener("click",s=>{const o=s.target.closest(".block");o?.dataset.sectionId&&Y(o.dataset.sectionId)}),w.addEventListener("click",T),U.addEventListener("click",s=>{s.target===U&&T()});function K(s){for(const o of s.querySelectorAll('input[type="text"], textarea'))if(o.value.trim())return!0;for(const o of s.querySelectorAll('input[type="checkbox"]'))if(o.checked)return!0;return!1}function M(){let s=!0;l.forEach(o=>{const g=K(o);u[o.id]?.classList.toggle("completed",g);const v=document.querySelector(`.adm-nav-item[data-target="${o.id}"]`);v&&v.classList.toggle("filled",g),g||(s=!1)}),document.getElementById("copyFullNoteBtn")?.classList.toggle("ready",s),Ye(h)}const b=Ce(()=>{Z.save(a),M()},d.UI.DEBOUNCE_DELAY_MS),N=document.getElementById("apiKeySetup"),y=document.getElementById("parseBtn");function _e(){return B.exists()?(N&&(N.style.display="none"),y&&(y.disabled=!1),!0):(y&&(y.disabled=!0),!1)}document.getElementById("saveApiKey")?.addEventListener("click",()=>{const o=document.getElementById("apiKeyInput")?.value.trim();if(o){B.save(o);const g=document.getElementById("apiKeyStatus");g&&(g.textContent=" ✓ Saved!"),setTimeout(()=>{N&&(N.style.display="none"),y&&(y.disabled=!1)},1e3)}}),document.getElementById("clear-api-key")?.addEventListener("click",()=>{B.clear(),N&&(N.style.display="block");const s=document.getElementById("apiKeyInput");s&&(s.value="");const o=document.getElementById("apiKeyStatus");o&&(o.textContent=""),y&&(y.disabled=!0);const g=document.getElementById("settings-menu");g&&g.classList.remove("open")}),y?.addEventListener("click",async()=>{y.disabled=!0,te.start();const s=document.getElementById("aiInputArea");await ke(s?.value.trim()||"",{onStatus:(o,g)=>f.show(o,g),onSuccess:o=>{te.complete(),Ge(o),b(),setTimeout(()=>f.hide(),d.UI.STATUS_HIDE_DELAY_MS)},onError:o=>{te.error(ge(o))}}),y.disabled=!B.exists()}),document.getElementById("clearAiBtn")?.addEventListener("click",()=>{const s=document.getElementById("aiInputArea");s&&(s.value=""),re(),f.hide()});const j=document.getElementById("imageInput"),G=document.getElementById("imageFileName"),k=document.getElementById("clearImageBtn"),H=document.getElementById("imagePreview"),F=document.getElementById("previewImg");function re(){V.clear(),j&&(j.value=""),G&&(G.textContent=""),k&&(k.style.display="none"),H&&(H.style.display="none"),F&&(F.src="")}j?.addEventListener("change",s=>{const o=s.target.files?.[0];if(!o)return;if(!o.type.startsWith("image/")){f.show("Please select an image file.","error");return}if(o.size>10*1024*1024){f.show("Image too large. Please use an image under 10 MB.","error");return}const g=new FileReader;g.onload=v=>{const S=v.target?.result,L=S.split(",")[1],Ee=o.type;V.setImage(L??"",Ee,o.name),G&&(G.textContent=o.name),k&&(k.style.display="inline-flex"),F&&(F.src=S),H&&(H.style.display="block"),f.show('Image uploaded. Click "Parse with AI" to process.',"success"),setTimeout(()=>f.hide(),2e3)},g.onerror=()=>f.show("Failed to read image file.","error"),g.readAsDataURL(o)}),k?.addEventListener("click",re);const ae=document.getElementById("voiceBtn"),le=document.getElementById("voiceIcon"),ce=document.getElementById("voiceText"),de=document.getElementById("voiceLang");function Q(s){ae?.classList.toggle("recording",s),le&&(le.textContent=s?"⏹":"🎤"),ce&&(ce.textContent=O.getButtonText(s))}de?.addEventListener("change",()=>{O.setLanguage(de.value),Q(O.getIsRecording())}),O.setCallbacks({onResult:s=>{const o=document.getElementById("aiInputArea");o&&(o.value+=s)},onError:s=>{f.show(s,"error"),Q(!1)},onStart:()=>f.show(O.getListeningText(),"loading"),onEnd:()=>f.hide()}),ae?.addEventListener("click",()=>{const s=O.toggle();Q(s),s||f.hide()}),document.getElementById("copyFullNoteBtn")?.addEventListener("click",async()=>{await ne(h.innerText)&&ie.show("Full Note Copied!")}),document.getElementById("copyHistoryBtn")?.addEventListener("click",async()=>{await ne(pe())&&ie.show("History Block Copied!")}),document.getElementById("noteOutputContainer")?.addEventListener("click",async s=>{const o=s.target.closest(".copy-section-btn");if(o){const g=o.closest(".output-section")?.querySelector(".output-content")?.textContent;g&&await ne(g)&&(o.textContent="✔",setTimeout(()=>o.textContent="📋",1500))}});const ye=document.getElementById("settings-gear"),ue=document.getElementById("settings-menu"),me=document.getElementById("settings-container");ye?.addEventListener("click",s=>{s.stopPropagation(),ue?.classList.toggle("open")}),document.addEventListener("click",s=>{me&&!me.contains(s.target)&&ue?.classList.remove("open")}),document.getElementById("clear-data")?.addEventListener("click",()=>{confirm("Clear all data for new patient?")&&(Z.clear(),location.reload())}),document.getElementById("background-input")?.addEventListener("change",s=>{const o=s.target.files?.[0];if(!o)return;const g=new FileReader;g.onload=v=>{const S=v.target?.result;document.body.style.backgroundImage=`url(${S})`,ee.save(S)},g.readAsDataURL(o)}),document.getElementById("reset-background")?.addEventListener("click",()=>{document.body.style.backgroundImage="",ee.clear()}),i.addEventListener("input",()=>b()),fe.init(),Z.load(a),ee.apply(document.body),_e(),M(),p("aiPanel")});</script>
+  <style rel="stylesheet" crossorigin>:root{--bg: #f8fafc;--surface: #ffffff;--surface2: #f1f5f9;--border: #e2e8f0;--text: #1e293b;--text-dim: #64748b;--accent: #0891b2;--accent-bg: rgba(8,145,178,.08);--green: #059669;--green-bg: rgba(5,150,105,.08);--warn: #f59e0b;--warn-bg: rgba(245,158,11,.08);--red: #ef4444;--red-bg: rgba(239,68,68,.08);--mono: "IBM Plex Mono", monospace}html[data-theme=dark]{--bg: #0d1117;--surface: #161b22;--surface2: #1c2129;--border: #30363d;--text: #e6edf3;--text-dim: #8b949e;--accent: #58a6ff;--accent-bg: rgba(88,166,255,.08);--green: #3fb950;--green-bg: rgba(63,185,80,.08);--warn: #f0883e;--warn-bg: rgba(240,136,62,.08);--red: #f85149;--red-bg: rgba(248,81,73,.08)}*,*:before,*:after{box-sizing:border-box;margin:0;padding:0}html,body{height:100%}body{font-family:var(--mono);font-size:.8rem;background:var(--bg);color:var(--text);display:flex;overflow:hidden;line-height:1.5}.adm-sidebar{width:200px;min-width:200px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}.adm-sidebar-brand{padding:1rem 1rem .9rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:.5rem}.adm-sidebar-title{font-size:.82rem;font-weight:600;letter-spacing:.05em;color:var(--accent)}.adm-settings-wrap{position:relative}.adm-settings-btn{background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:1rem;line-height:1;padding:.1rem .3rem;border-radius:4px;font-family:var(--mono)}.adm-settings-btn:hover{color:var(--text);background:var(--surface2)}.adm-settings-menu{display:none;position:absolute;top:calc(100% + 4px);right:0;background:var(--surface);border:1px solid var(--border);border-radius:6px;min-width:160px;z-index:200;padding:.3rem 0;box-shadow:0 4px 12px #00000026}.adm-settings-menu.open{display:block}.adm-settings-menu button{display:block;width:100%;padding:.45rem .85rem;background:none;border:none;text-align:left;font-family:var(--mono);font-size:.75rem;color:var(--text);cursor:pointer}.adm-settings-menu button:hover{background:var(--surface2)}.adm-nav{flex:1;padding:.5rem .4rem;overflow-y:auto}.adm-nav-item{display:flex;align-items:center;justify-content:space-between;width:100%;padding:.5rem .65rem;border:none;border-radius:5px;background:none;font-family:var(--mono);font-size:.72rem;font-weight:500;color:var(--text-dim);cursor:pointer;text-align:left;margin-bottom:1px;transition:background .1s,color .1s}.adm-nav-item:hover{background:var(--surface2);color:var(--text)}.adm-nav-item.active{background:var(--accent-bg);color:var(--accent)}.adm-nav-item .adm-nav-dot{width:6px;height:6px;border-radius:50%;background:var(--border);flex-shrink:0}.adm-nav-item.filled .adm-nav-dot{background:var(--green)}.adm-sidebar-actions{padding:.7rem .6rem;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:.4rem}.adm-main{flex:1;display:flex;flex-direction:column;overflow-y:auto;background:var(--bg)}.adm-panel{display:none;padding:1.2rem 1.4rem;flex:1}.adm-panel.active{display:flex;flex-direction:column;gap:.9rem}#sectionsContainer>section{display:none;padding:1.2rem 1.4rem}#sectionsContainer>section.active{display:block}.adm-panel-title,#sectionsContainer>section>h2{font-size:.75rem;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--text-dim);padding-bottom:.6rem;border-bottom:1px solid var(--border);margin-bottom:.3rem}#sectionsContainer>section>h2{margin:0 0 .9rem}h3{font-size:.72rem;font-weight:600;color:var(--text);margin:1.1rem 0 .5rem;text-transform:uppercase;letter-spacing:.03em}h4{font-size:.68rem;font-weight:500;color:var(--text-dim);margin:.7rem 0 .35rem}.btn-primary{padding:.3rem .75rem;background:var(--accent);color:#fff;border:1px solid var(--accent);border-radius:5px;font-family:var(--mono);font-size:.72rem;font-weight:500;cursor:pointer;transition:opacity .15s;white-space:nowrap}.btn-primary:hover:not(:disabled){opacity:.85}.btn-primary:disabled{opacity:.45;cursor:not-allowed}.btn-secondary,.ai-btn{padding:.3rem .75rem;background:none;color:var(--text-dim);border:1px solid var(--border);border-radius:5px;font-family:var(--mono);font-size:.72rem;font-weight:500;cursor:pointer;transition:background .12s,color .12s;white-space:nowrap}.btn-secondary:hover,.ai-btn:hover{background:var(--surface2);color:var(--text)}#copyHistoryBtn,#copyFullNoteBtn{width:100%}#copyFullNoteBtn.ready{background:var(--green);border-color:var(--green);color:#fff}input[type=text],input[type=date],input[type=password],textarea,select{width:100%;font-family:var(--mono);font-size:.75rem;color:var(--text);background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:.35rem .55rem;line-height:1.45;transition:border-color .12s}input[type=text]:focus,input[type=date]:focus,input[type=password]:focus,textarea:focus,select:focus{outline:none;border-color:var(--accent)}input::placeholder,textarea::placeholder{color:var(--text-dim)}textarea{resize:vertical;min-height:4.5rem}label{display:flex;flex-direction:column;gap:.25rem;font-size:.72rem;color:var(--text-dim)}label input[type=text],label input[type=date]{margin-top:0}label.inline{flex-direction:row;align-items:center;gap:.5rem}label.inline input{width:auto;flex:1}label.toggle{flex-direction:row;align-items:center;gap:.4rem;font-size:.72rem;color:var(--text);cursor:pointer;padding:.25rem .4rem;border-radius:4px}label.toggle:hover{background:var(--surface2)}label.toggle input[type=checkbox]{width:auto;accent-color:var(--accent);cursor:pointer;flex-shrink:0}div[style*="display: flex"],div[style*="display:flex"]{font-family:var(--mono)}.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:.2rem .6rem;margin-top:.4rem}.vitals-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:.6rem}details{border:1px solid var(--border);border-radius:5px;overflow:hidden}details+details{margin-top:.4rem}summary{padding:.45rem .65rem;font-size:.72rem;font-weight:600;color:var(--text);cursor:pointer;background:var(--surface2);list-style:none;display:flex;align-items:center;gap:.4rem;user-select:none}summary:before{content:"▶";font-size:.55rem;color:var(--text-dim);transition:transform .15s}details[open]>summary:before{transform:rotate(90deg)}summary::-webkit-details-marker{display:none}details>div,details>.grid{padding:.6rem .65rem;background:var(--surface)}#aiInputArea{min-height:110px;font-size:.75rem}.adm-ai-controls{display:flex;gap:.5rem;flex-wrap:wrap;align-items:center}.adm-select{width:auto;padding:.3rem .5rem}.adm-image-row{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem}.adm-filename{font-size:.68rem;color:var(--text-dim);flex:1}.adm-preview-img{max-width:240px;max-height:160px;border-radius:6px;border:1px solid var(--border);margin-top:.4rem}.adm-info-row{font-size:.7rem;color:var(--text-dim);background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:.5rem .7rem}.adm-status{font-size:.72rem;border-radius:5px;padding:.4rem .6rem;display:none}.adm-status.loading{display:block;background:var(--warn-bg);color:var(--warn);border:1px solid var(--warn)}.adm-status.success{display:block;background:var(--green-bg);color:var(--green);border:1px solid var(--green)}.adm-status.error{display:block;background:var(--red-bg);color:var(--red);border:1px solid var(--red)}.adm-progress{display:flex;flex-direction:column;gap:.25rem}.adm-progress-track{height:3px;background:var(--border);border-radius:2px;overflow:hidden}.adm-progress-fill{height:100%;width:0%;background:var(--accent);transition:width .3s ease-out}.adm-progress-text{font-size:.65rem;color:var(--text-dim);text-align:center}#voiceBtn.recording{border-color:var(--red);color:var(--red);animation:adm-pulse 1.2s infinite}@keyframes adm-pulse{0%,to{box-shadow:0 0 #ef444466}50%{box-shadow:0 0 0 6px #ef444400}}#blockContainer,#modalOverlay{display:none!important}#noteOutputContainer{border:1px solid var(--border);border-radius:5px;background:var(--surface);padding:.8rem;min-height:8rem;overflow-y:auto}#noteOutput{font-size:.72rem;line-height:1.6;white-space:pre-wrap;color:var(--text)}.output-section{margin-bottom:.75rem}.output-section:last-child{margin-bottom:0}.output-section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:.3rem}.output-section-title{font-size:.7rem;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--text-dim)}.copy-section-btn{background:none;border:1px solid var(--border);border-radius:4px;font-size:.65rem;padding:.1rem .4rem;color:var(--text-dim);cursor:pointer;font-family:var(--mono)}.copy-section-btn:hover{background:var(--surface2);color:var(--text)}.output-content{font-size:.72rem;white-space:pre-wrap;line-height:1.55;color:var(--text)}p[style*="background: #e9ecef"],p[style*="background:#e9ecef"]{background:var(--surface2)!important;color:var(--text-dim)!important;border:1px solid var(--border)!important;border-radius:5px!important;font-size:.72rem!important;padding:.4rem .6rem!important}#copy-toast{position:fixed;bottom:1.2rem;right:1.2rem;background:var(--accent);color:#fff;font-size:.72rem;padding:.4rem .8rem;border-radius:5px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:9999}#copy-toast.visible{opacity:1}</style>
 </head>
 <body>
-  <section>
-    <h1>Admissions Demo</h1>
-    <p>The public static build keeps Admissions as a placeholder so no clinical uploads, microphones, backend parsing, or private templates are exposed. The Handoff and portal demo APIs remain available with synthetic data.</p>
-  </section>
+
+  <!-- ── Sidebar nav ──────────────────────────────────────────────── -->
+  <aside class="adm-sidebar" id="adm-sidebar">
+    <div class="adm-sidebar-brand">
+      <span class="adm-sidebar-title">Admissions</span>
+      <div class="adm-settings-wrap" id="settings-container">
+        <button class="adm-settings-btn" id="settings-gear" title="Settings">⋯</button>
+        <div class="adm-settings-menu" id="settings-menu">
+          <button id="clear-data">New patient</button>
+        </div>
+      </div>
+    </div>
+
+    <nav class="adm-nav" id="adm-nav">
+      <button class="adm-nav-item active" data-target="aiPanel">AI Entry<span class="adm-nav-dot"></span></button>
+      <button class="adm-nav-item" data-target="chiefSection">CC / HPI<span class="adm-nav-dot"></span></button>
+      <button class="adm-nav-item" data-target="historySection">History<span class="adm-nav-dot"></span></button>
+      <button class="adm-nav-item" data-target="psychosocialSection">Psychosocial<span class="adm-nav-dot"></span></button>
+      <button class="adm-nav-item" data-target="dischargePlanningSection">Discharge Plan<span class="adm-nav-dot"></span></button>
+      <button class="adm-nav-item" data-target="vitalsSection">Vitals<span class="adm-nav-dot"></span></button>
+      <button class="adm-nav-item" data-target="peSection">Physical Exam<span class="adm-nav-dot"></span></button>
+      <button class="adm-nav-item" data-target="rosSection">ROS<span class="adm-nav-dot"></span></button>
+      <button class="adm-nav-item" data-target="imagingSection">Imaging<span class="adm-nav-dot"></span></button>
+      <button class="adm-nav-item" data-target="pathologySection">Pathology<span class="adm-nav-dot"></span></button>
+      <button class="adm-nav-item" data-target="diagnosisSection">Diagnosis<span class="adm-nav-dot"></span></button>
+      <button class="adm-nav-item" data-target="planSection">Care Plan<span class="adm-nav-dot"></span></button>
+      <button class="adm-nav-item" data-target="outputPanel">Output<span class="adm-nav-dot"></span></button>
+    </nav>
+
+    <div class="adm-sidebar-actions">
+      <button class="btn-secondary" id="copyHistoryBtn">Copy History</button>
+      <button class="btn-primary"   id="copyFullNoteBtn">Copy Full Note</button>
+    </div>
+  </aside>
+
+  <!-- ── Main content ─────────────────────────────────────────────── -->
+  <main class="adm-main" id="adm-main">
+
+    <!-- AI Quick Entry panel -->
+    <div id="aiPanel" class="adm-panel active">
+      <div class="adm-panel-title">AI Quick Entry</div>
+
+      <div id="apiKeySetup" class="adm-info-row">
+        API key and model are configured in Portal Settings — shared automatically.
+      </div>
+
+      <textarea id="aiInputArea" placeholder="Paste notes here, or use the microphone to dictate…
+
+Example: 65 year old male with HTN, DM, presenting with chest pain for 2 hours…"></textarea>
+
+      <div id="imageUploadSection" class="adm-image-row">
+        <input type="file" id="imageInput" accept="image/*" style="display:none;" />
+        <button class="btn-secondary" id="imageUploadBtn" onclick="document.getElementById('imageInput').click();">📷 Upload image</button>
+        <span class="adm-filename" id="imageFileName"></span>
+        <button class="btn-secondary" id="clearImageBtn" style="display:none;">✕ Remove</button>
+        <div id="imagePreview" style="display:none; width:100%; margin-top:0.4rem;">
+          <img class="adm-preview-img" id="previewImg" />
+        </div>
+      </div>
+
+      <div class="adm-ai-controls">
+        <select class="adm-select" id="voiceLang">
+          <option value="zh-TW">中文</option>
+          <option value="en-US">English</option>
+        </select>
+        <button class="btn-secondary" id="voiceBtn">🎤 <span id="voiceText">Dictate</span></button>
+        <button class="btn-primary"   id="parseBtn" disabled>Parse with AI</button>
+        <button class="btn-secondary" id="clearAiBtn">Clear</button>
+      </div>
+
+      <div class="adm-status" id="aiStatus"></div>
+      <div class="adm-progress" id="aiProgressContainer" style="display:none;">
+        <div class="adm-progress-track" id="aiProgressBar">
+          <div class="adm-progress-fill" id="aiProgressFill"></div>
+        </div>
+        <div class="adm-progress-text" id="aiProgressText"></div>
+      </div>
+    </div>
+
+    <!-- Block container: hidden, used only for JS state tracking -->
+    <div id="blockContainer"></div>
+
+    <!-- ── Form sections ────────────────────────────────────────── -->
+    <div id="sectionsContainer">
+
+      <section id="chiefSection" data-title="Chief Complaint">
+        <h2>Chief Complaint &amp; Present Illness</h2>
+        <label>Informant: <input type="text" id="informant" placeholder="Patient and medical records"/></label>
+        <textarea id="ccpi" rows="5" placeholder="e.g., Symptoms for a length of time…"></textarea>
+      </section>
+
+      <section id="historySection" data-title="History">
+        <h2>Routine History</h2>
+        <h3>Patient History &amp; Present Illness Narrative</h3>
+        <textarea id="patientHistoryNarrative" rows="10" placeholder="e.g., This is a xx-year-old (wo)man with…"></textarea>
+        <h3>Past Medical History (Structured)</h3>
+        <textarea id="hist_pmh" rows="4" placeholder="1. Some kind of disease…
+2. Some other kind of disease"></textarea>
+        <h3>Medication Allergy</h3>
+        <div style="margin-top:6px; display:flex; flex-wrap:wrap; align-items:center; gap:10px;">
+          <label class="toggle" style="flex-shrink:0;"><input type="checkbox" id="hist_med_allergy_denied"/>Denied</label>
+          <input type="text" id="hist_med_allergy_details" placeholder="Details (e.g., Penicillin, Rash)" style="flex-grow:1; min-width:150px;"/>
+          <label style="flex-shrink:0; flex-direction:row; align-items:center; gap:0.3rem;">Date: <input type="text" id="hist_med_allergy_date" placeholder="YYYY/MM/DD" style="width:120px;"/></label>
+        </div>
+        <h3>Medication ADR (Adverse Drug Reaction)</h3>
+        <textarea id="hist_med_adr" rows="1" placeholder="unknown"></textarea>
+        <h3>Allergy to Medical Device and Materials</h3>
+        <div style="margin-top:6px; display:flex; flex-wrap:wrap; align-items:center; gap:10px;">
+          <label class="toggle" style="flex-shrink:0;"><input type="checkbox" id="hist_device_allergy_denied"/>Denied</label>
+          <input type="text" id="hist_device_allergy_details" placeholder="Details (e.g., Latex, Swelling)" style="flex-grow:1; min-width:150px;"/>
+          <label style="flex-shrink:0; flex-direction:row; align-items:center; gap:0.3rem;">Date: <input type="text" id="hist_device_allergy_date" placeholder="YYYY/MM/DD" style="width:120px;"/></label>
+        </div>
+        <h3>Current Medication</h3>
+        <label>demo EMR (usually auto-filled): <input type="text" id="hist_current_med_ntuh" placeholder="Can be left blank or used for copy-paste"/></label>
+        <label>Other: <input type="text" id="hist_current_med_other" placeholder="denied"/></label>
+        <label>中草藥 (TCM): <input type="text" id="hist_current_med_tcm" placeholder="denied"/></label>
+        <label>保健食品 (Supplements): <input type="text" id="hist_current_med_supplements" placeholder="denied"/></label>
+        <h3>Hospitalization History</h3>
+        <textarea id="hist_hospitalization_history" rows="4" placeholder="e.g., 入院日期:YYYY_MM_DD 出院日期:YYYY_MM_DD 診斷:"></textarea>
+        <h3>Past Surgical History</h3>
+        <textarea id="hist_surgical_history_detailed" rows="3" placeholder="denied"></textarea>
+        <h3>Family History</h3>
+        <div class="grid" id="fhGrid">
+          <label class="toggle"><input type="checkbox" id="fh_HTN" />Hypertension</label>
+          <label class="toggle"><input type="checkbox" id="fh_DM" />Diabetes</label>
+          <label class="toggle"><input type="checkbox" id="fh_DLP" />Dyslipidemia</label>
+          <label class="toggle"><input type="checkbox" id="fh_CA" />Cancer</label>
+          <label class="toggle"><input type="checkbox" id="fh_CAD" />CAD</label>
+        </div>
+        <label style="margin-top:0.5rem;">Family History Details:
+          <textarea id="fh_details" rows="2" placeholder="e.g., Grandfather: DM, HTN"></textarea>
+        </label>
+        <h3>TOCC</h3>
+        <details>
+          <summary>Travel, Occupation, Contact, Cluster</summary>
+          <div style="display:flex; flex-direction:column; gap:0.4rem; margin-top:0.4rem;">
+            <label>Travel: <input type="text" id="hist_tocc_travel" placeholder="denied"/></label>
+            <label>Occupation: <input type="text" id="hist_tocc_occupation" placeholder="Office worker"/></label>
+            <label>Cluster and contact: <input type="text" id="hist_tocc_cluster" placeholder="denied"/></label>
+          </div>
+        </details>
+        <h3>ABC</h3>
+        <details>
+          <summary>Personal Habits</summary>
+          <div style="display:flex; flex-direction:column; gap:0.4rem; margin-top:0.4rem;">
+            <label>Alcohol: <input type="text" id="hist_abc_alcohol" placeholder="denied"/></label>
+            <label>Betel nuts: <input type="text" id="hist_abc_betel" placeholder="denied"/></label>
+            <label>Smoking: <input type="text" id="hist_abc_smoking" placeholder="denied"/></label>
+          </div>
+        </details>
+      </section>
+
+      <section id="psychosocialSection" data-title="Psychosocial">
+        <h2>社會心理相關評估 (Psychosocial Assessment)</h2>
+        <textarea id="psychosocial_assessment" rows="3" placeholder="pending"></textarea>
+      </section>
+
+      <section id="dischargePlanningSection" data-title="Discharge Plan">
+        <h2>出院規劃 (Discharge Planning)</h2>
+        <div class="grid" style="grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));">
+          <label>管路留置狀況：<input type="text" id="dp_catheter" placeholder="Nil"/></label>
+          <label>日常生活功能分數：<input type="text" id="dp_adl" placeholder="100"/></label>
+          <label>預期出院後居住場所：<input type="text" id="dp_residence" placeholder="與家人同住"/></label>
+          <label>預期出院後主要照顧者：<input type="text" id="dp_caregiver" placeholder="自己"/></label>
+          <label>出院規劃收案篩檢：<input type="text" id="dp_screening" placeholder="一般病患"/></label>
+        </div>
+      </section>
+
+      <section id="vitalsSection" data-title="Vitals">
+        <h2>Vitals</h2>
+        <div class="vitals-grid">
+          <label>Height (cm): <input type="text" id="vitals_bh"/></label>
+          <label>Weight (kg): <input type="text" id="vitals_bw"/></label>
+          <label>Temp (°C):   <input type="text" id="vitals_t"/></label>
+          <label>Pulse (bpm): <input type="text" id="vitals_p"/></label>
+          <label>Resp (/min): <input type="text" id="vitals_r"/></label>
+          <label>BP (mmHg):   <input type="text" id="vitals_bp"/></label>
+          <label>Pain Score:  <input type="text" id="vitals_pain"/></label>
+        </div>
+      </section>
+
+      <section id="peSection" data-title="Physical Exam">
+        <h2>Physical Examination</h2>
+        <h3>General Appearance</h3>
+        <textarea id="pe_details" rows="3" placeholder="e.g., General appearance: fair body figure&#10;Breathing sound: crackles(+, right upper lobe)"></textarea>
+        <details open>
+          <summary>Neurological Examination</summary>
+          <div style="display:flex; flex-direction:column; gap:0.4rem;">
+            <label>Consciousness: <input type="text" id="pe_neuro_conscious" placeholder="alert and oriented, GCS: E4M6V5"/></label>
+            <label>Muscle power:  <input type="text" id="pe_neuro_power"    placeholder="can not perform"/></label>
+            <label>Gait:          <input type="text" id="pe_neuro_gait"     placeholder="no test"/></label>
+          </div>
+        </details>
+        <details>
+          <summary>HEENT</summary>
+          <div class="grid">
+            <label class="toggle"><input type="checkbox" id="pe_head_raccoon"/>Raccoon eye</label>
+            <label class="toggle"><input type="checkbox" id="pe_head_rash"/>Rash</label>
+            <label class="toggle"><input type="checkbox" id="pe_pupil_abn"/>Pupil abnormal</label>
+            <label class="toggle"><input type="checkbox" id="pe_eom_lim"/>EOM limited</label>
+            <label class="toggle"><input type="checkbox" id="pe_conj_pale"/>Conjunctiva pale</label>
+            <label class="toggle"><input type="checkbox" id="pe_sclera_icteric"/>Sclera icteric</label>
+            <label class="toggle"><input type="checkbox" id="pe_ear_def"/>Ear deformity</label>
+            <label class="toggle"><input type="checkbox" id="pe_ear_dis"/>Ear discharge</label>
+            <label class="toggle"><input type="checkbox" id="pe_ear_hi"/>Hearing impairment</label>
+            <label class="toggle"><input type="checkbox" id="pe_throat_mass"/>Throat mass</label>
+            <label class="toggle"><input type="checkbox" id="pe_throat_ulcer"/>Throat ulcer</label>
+            <label class="toggle"><input type="checkbox" id="pe_throat_ng"/>NG tube</label>
+          </div>
+        </details>
+        <details>
+          <summary>Neck</summary>
+          <div class="grid">
+            <label class="toggle"><input type="checkbox" id="pe_neck_stiff"/>Stiffness</label>
+            <label class="toggle"><input type="checkbox" id="pe_neck_bruit"/>Bruit</label>
+            <label class="toggle"><input type="checkbox" id="pe_neck_jvp"/>Jugular engorgement</label>
+            <label class="toggle"><input type="checkbox" id="pe_neck_goiter"/>Goiter</label>
+            <label class="toggle"><input type="checkbox" id="pe_neck_lymph"/>Lymphadenopathy</label>
+          </div>
+        </details>
+        <details>
+          <summary>Chest</summary>
+          <div class="grid">
+            <label class="toggle"><input type="checkbox" id="pe_chest_def"/>Chest deformity</label>
+            <label class="toggle"><input type="checkbox" id="pe_chest_spider"/>Spider angioma</label>
+            <label class="toggle"><input type="checkbox" id="pe_chest_lump"/>Lumps</label>
+            <label class="toggle"><input type="checkbox" id="pe_chest_discharge"/>Discharge</label>
+            <label class="toggle"><input type="checkbox" id="pe_chest_tender"/>Tenderness</label>
+            <label class="toggle"><input type="checkbox" id="pe_chest_crackles"/>Crackles</label>
+            <label class="toggle"><input type="checkbox" id="pe_chest_wheeze"/>Wheezing</label>
+            <label class="toggle"><input type="checkbox" id="pe_chest_rhonchi"/>Rhonchi</label>
+            <label class="toggle"><input type="checkbox" id="pe_chest_stridor"/>Stridor</label>
+          </div>
+        </details>
+        <details>
+          <summary>Heart</summary>
+          <div class="grid">
+            <label class="toggle"><input type="checkbox" id="pe_heart_irreg"/>Irregular beat</label>
+            <label class="toggle"><input type="checkbox" id="pe_heart_murmur"/>Murmur</label>
+            <label class="toggle"><input type="checkbox" id="pe_heart_thrill"/>Thrill</label>
+            <label class="toggle"><input type="checkbox" id="pe_heart_pmi"/>Abnormal PMI</label>
+          </div>
+        </details>
+        <details>
+          <summary>Abdomen</summary>
+          <div class="grid">
+            <label class="toggle"><input type="checkbox" id="pe_abd_dist"/>Distension</label>
+            <label class="toggle"><input type="checkbox" id="pe_abd_caput"/>Caput medusa</label>
+            <label class="toggle"><input type="checkbox" id="pe_abd_mass"/>Palpable mass</label>
+            <label class="toggle"><input type="checkbox" id="pe_abd_tender"/>Tenderness</label>
+            <label class="toggle"><input type="checkbox" id="pe_abd_hjr"/>Hepato-jugular reflux</label>
+          </div>
+        </details>
+        <details>
+          <summary>Back</summary>
+          <div class="grid">
+            <label class="toggle"><input type="checkbox" id="pe_back_cv"/>CV angle knocking pain</label>
+          </div>
+        </details>
+        <details>
+          <summary>Extremities</summary>
+          <div class="grid">
+            <label class="toggle"><input type="checkbox" id="pe_ext_lim"/>Limitation of movement</label>
+            <label class="toggle"><input type="checkbox" id="pe_ext_def"/>Deformity</label>
+            <label class="toggle"><input type="checkbox" id="pe_ext_cyano"/>Cyanosis</label>
+            <label class="toggle"><input type="checkbox" id="pe_ext_edema"/>Pitting edema</label>
+          </div>
+        </details>
+        <details>
+          <summary>Skin</summary>
+          <div class="grid">
+            <label class="toggle"><input type="checkbox" id="pe_skin_rash"/>Rash</label>
+            <label class="toggle"><input type="checkbox" id="pe_skin_tumor"/>Tumor</label>
+            <label class="toggle"><input type="checkbox" id="pe_skin_pete"/>Petechiae</label>
+            <label class="toggle"><input type="checkbox" id="pe_skin_ecch"/>Ecchymosis</label>
+            <label class="toggle"><input type="checkbox" id="pe_skin_purp"/>Purpura</label>
+            <label class="toggle"><input type="checkbox" id="pe_skin_depig"/>Depigmentation</label>
+            <label class="toggle"><input type="checkbox" id="pe_skin_hyperpig"/>Abnormal pigmentation</label>
+            <label class="toggle"><input type="checkbox" id="pe_skin_tel"/>Telangiectasia</label>
+          </div>
+        </details>
+      </section>
+
+      <section id="rosSection" data-title="Review of Systems">
+        <h2>Review of Systems (ROS)</h2>
+        <h3>ROS Details</h3>
+        <textarea id="ros_details" rows="2" placeholder="e.g., Respiratory: dyspnea(-), chest pain(-), productive cough(+, 6 months)"></textarea>
+        <details open>
+          <summary>Systemic</summary>
+          <div class="grid">
+            <label class="toggle"><input type="checkbox" id="ros_sys_fever"/>fever</label>
+            <label class="toggle"><input type="checkbox" id="ros_sys_chills"/>chills</label>
+            <label class="toggle"><input type="checkbox" id="ros_sys_night_sweats"/>night sweats</label>
+            <label class="toggle"><input type="checkbox" id="ros_sys_fatigue"/>fatigue</label>
+            <label class="toggle"><input type="checkbox" id="ros_sys_conscious_dist"/>consciousness disturbance</label>
+            <label class="toggle"><input type="checkbox" id="ros_sys_insomnia"/>insomnia</label>
+            <label class="toggle"><input type="checkbox" id="ros_sys_weight_change"/>weight change</label>
+            <label class="toggle"><input type="checkbox" id="ros_sys_appetite_dec"/>decreased appetite</label>
+          </div>
+        </details>
+        <details>
+          <summary>HEENT</summary>
+          <div class="grid">
+            <label class="toggle"><input type="checkbox" id="ros_heent_headache"/>headache</label>
+            <label class="toggle"><input type="checkbox" id="ros_heent_dizziness"/>dizziness</label>
+            <label class="toggle"><input type="checkbox" id="ros_heent_vertigo"/>vertigo</label>
+            <label class="toggle"><input type="checkbox" id="ros_heent_diplopia"/>diplopia</label>
+            <label class="toggle"><input type="checkbox" id="ros_heent_visual_field_defect"/>visual field defect</label>
+            <label class="toggle"><input type="checkbox" id="ros_heent_blurred_vision"/>blurred vision</label>
+            <label class="toggle"><input type="checkbox" id="ros_heent_ocular_pain"/>ocular pain</label>
+            <label class="toggle"><input type="checkbox" id="ros_heent_tinnitus"/>tinnitus</label>
+            <label class="toggle"><input type="checkbox" id="ros_heent_otalgia"/>otalgia</label>
+            <label class="toggle"><input type="checkbox" id="ros_heent_otorrhea"/>otorrhea</label>
+            <label class="toggle"><input type="checkbox" id="ros_heent_hearing_impairment"/>hearing impairment</label>
+            <label class="toggle"><input type="checkbox" id="ros_heent_nasal_congestion"/>nasal congestion</label>
+            <label class="toggle"><input type="checkbox" id="ros_heent_nasal_discharge"/>nasal discharge</label>
+            <label class="toggle"><input type="checkbox" id="ros_heent_sore_throat"/>sore throat</label>
+            <label class="toggle"><input type="checkbox" id="ros_heent_gum_bleeding"/>gum bleeding</label>
+            <label class="toggle"><input type="checkbox" id="ros_heent_dysphagia"/>dysphagia</label>
+            <label class="toggle"><input type="checkbox" id="ros_heent_hoarseness"/>hoarseness</label>
+            <label class="toggle"><input type="checkbox" id="ros_heent_oral_ulcers"/>oral ulcers</label>
+          </div>
+        </details>
+        <details>
+          <summary>Cardiorespiratory</summary>
+          <div class="grid">
+            <label class="toggle"><input type="checkbox" id="ros_cardio_chest_pain"/>chest pain</label>
+            <label class="toggle"><input type="checkbox" id="ros_cardio_exertional_dyspnea"/>exertional dyspnea</label>
+            <label class="toggle"><input type="checkbox" id="ros_cardio_nocturnal_dyspnea"/>nocturnal dyspnea</label>
+            <label class="toggle"><input type="checkbox" id="ros_cardio_orthopnea"/>orthopnea</label>
+            <label class="toggle"><input type="checkbox" id="ros_cardio_pitting_edema"/>pitting edema</label>
+            <label class="toggle"><input type="checkbox" id="ros_cardio_syncope"/>syncope</label>
+            <label class="toggle"><input type="checkbox" id="ros_cardio_palpitation"/>palpitation</label>
+            <label class="toggle"><input type="checkbox" id="ros_cardio_intermittent_claudication"/>intermittent claudication</label>
+            <label class="toggle"><input type="checkbox" id="ros_cardio_dyspnea"/>dyspnea</label>
+            <label class="toggle"><input type="checkbox" id="ros_cardio_cough"/>cough</label>
+            <label class="toggle"><input type="checkbox" id="ros_cardio_sputum"/>sputum</label>
+            <label class="toggle"><input type="checkbox" id="ros_cardio_hemoptysis"/>hemoptysis</label>
+            <label class="toggle"><input type="checkbox" id="ros_cardio_wheezes"/>wheezes</label>
+            <label class="toggle"><input type="checkbox" id="ros_cardio_chest_tightness"/>chest tightness</label>
+          </div>
+        </details>
+        <details>
+          <summary>Gastrointestinal</summary>
+          <div class="grid">
+            <label class="toggle"><input type="checkbox" id="ros_gi_anorexia"/>anorexia</label>
+            <label class="toggle"><input type="checkbox" id="ros_gi_nausea"/>nausea</label>
+            <label class="toggle"><input type="checkbox" id="ros_gi_vomiting"/>vomiting</label>
+            <label class="toggle"><input type="checkbox" id="ros_gi_acid_regurgitation"/>acid regurgitation</label>
+            <label class="toggle"><input type="checkbox" id="ros_gi_abdominal_pain"/>abdominal pain</label>
+            <label class="toggle"><input type="checkbox" id="ros_gi_abdominal_distention"/>abdominal distention</label>
+            <label class="toggle"><input type="checkbox" id="ros_gi_dysphagia"/>dysphagia</label>
+            <label class="toggle"><input type="checkbox" id="ros_gi_dyspepsia"/>dyspepsia</label>
+            <label class="toggle"><input type="checkbox" id="ros_gi_hematemesis"/>hematemesis</label>
+            <label class="toggle"><input type="checkbox" id="ros_gi_diarrhea"/>diarrhea</label>
+            <label class="toggle"><input type="checkbox" id="ros_gi_constipation"/>constipation</label>
+            <label class="toggle"><input type="checkbox" id="ros_gi_melena"/>melena</label>
+            <label class="toggle"><input type="checkbox" id="ros_gi_hematochezia"/>hematochezia</label>
+            <label class="toggle"><input type="checkbox" id="ros_gi_tenesmus"/>tenesmus</label>
+            <label class="toggle"><input type="checkbox" id="ros_gi_small_caliber_stool"/>small caliber stool</label>
+          </div>
+        </details>
+        <details>
+          <summary>Genitourinary</summary>
+          <div class="grid">
+            <label class="toggle"><input type="checkbox" id="ros_gu_urinary_frequency"/>urinary frequency</label>
+            <label class="toggle"><input type="checkbox" id="ros_gu_urgency"/>urgency</label>
+            <label class="toggle"><input type="checkbox" id="ros_gu_nocturia"/>nocturia</label>
+            <label class="toggle"><input type="checkbox" id="ros_gu_incontinence"/>incontinence</label>
+            <label class="toggle"><input type="checkbox" id="ros_gu_weak_stream"/>weak urinary stream</label>
+            <label class="toggle"><input type="checkbox" id="ros_gu_hesitancy"/>hesitancy</label>
+            <label class="toggle"><input type="checkbox" id="ros_gu_incomplete_voiding"/>incomplete voiding</label>
+            <label class="toggle"><input type="checkbox" id="ros_gu_terminal_dribbling"/>terminal dribbling</label>
+            <label class="toggle"><input type="checkbox" id="ros_gu_dysuria"/>dysuria</label>
+            <label class="toggle"><input type="checkbox" id="ros_gu_hematuria"/>hematuria</label>
+            <label class="toggle"><input type="checkbox" id="ros_gu_flank_pain"/>flank pain</label>
+            <label class="toggle"><input type="checkbox" id="ros_gu_polyuria"/>polyuria</label>
+            <label class="toggle"><input type="checkbox" id="ros_gu_oliguria"/>oliguria</label>
+          </div>
+        </details>
+        <details>
+          <summary>Musculoskeletal</summary>
+          <div class="grid">
+            <label class="toggle"><input type="checkbox" id="ros_msk_arthralgia"/>arthralgia</label>
+            <label class="toggle"><input type="checkbox" id="ros_msk_joint_stiffness"/>joint stiffness</label>
+            <label class="toggle"><input type="checkbox" id="ros_msk_joint_swelling"/>joint swelling</label>
+            <label class="toggle"><input type="checkbox" id="ros_msk_myalgia"/>myalgia</label>
+            <label class="toggle"><input type="checkbox" id="ros_msk_cramps"/>cramps</label>
+            <label class="toggle"><input type="checkbox" id="ros_msk_bone_pain"/>bone pain</label>
+            <label class="toggle"><input type="checkbox" id="ros_msk_back_pain"/>back pain</label>
+            <label class="toggle"><input type="checkbox" id="ros_msk_fractures"/>fractures</label>
+          </div>
+        </details>
+        <details>
+          <summary>Nervous</summary>
+          <div class="grid">
+            <label class="toggle"><input type="checkbox" id="ros_neuro_blurred_vision"/>blurred vision</label>
+            <label class="toggle"><input type="checkbox" id="ros_neuro_hearing_impairment"/>hearing impairment</label>
+            <label class="toggle"><input type="checkbox" id="ros_neuro_speech_problem"/>speech problem</label>
+            <label class="toggle"><input type="checkbox" id="ros_neuro_numbness"/>numbness</label>
+            <label class="toggle"><input type="checkbox" id="ros_neuro_paraesthesia"/>paraesthesia</label>
+            <label class="toggle"><input type="checkbox" id="ros_neuro_allodynia"/>allodynia</label>
+            <label class="toggle"><input type="checkbox" id="ros_neuro_paresis_plegia"/>paresis/plegia</label>
+            <label class="toggle"><input type="checkbox" id="ros_neuro_gait_disturbance"/>gait disturbance</label>
+            <label class="toggle"><input type="checkbox" id="ros_neuro_sphincter_disturbance"/>sphincter disturbance</label>
+            <label class="toggle"><input type="checkbox" id="ros_neuro_convulsion"/>convulsion</label>
+            <label class="toggle"><input type="checkbox" id="ros_neuro_resting_tremor"/>resting tremor</label>
+          </div>
+        </details>
+        <details>
+          <summary>Skin</summary>
+          <div class="grid">
+            <label class="toggle"><input type="checkbox" id="ros_skin_color_changes"/>color changes</label>
+            <label class="toggle"><input type="checkbox" id="ros_skin_jaundice"/>jaundice</label>
+            <label class="toggle"><input type="checkbox" id="ros_skin_rash"/>rash</label>
+            <label class="toggle"><input type="checkbox" id="ros_skin_itching"/>itching</label>
+            <label class="toggle"><input type="checkbox" id="ros_skin_petechiae"/>petechiae</label>
+            <label class="toggle"><input type="checkbox" id="ros_skin_ecchymoses"/>ecchymoses</label>
+            <label class="toggle"><input type="checkbox" id="ros_skin_purpura"/>purpura</label>
+          </div>
+        </details>
+      </section>
+
+      <section id="imagingSection" data-title="Imaging Report">
+        <h2>影像報告 (Imaging Report)</h2>
+        <textarea id="imaging_report" rows="6" placeholder="e.g., MRI Head and Neck 2026/01/09: No definite local tumour recurrence. No enlarged cervical lymph nodes.
+
+CXR 2026/01/09: No cardiomegaly, no obvious pneumonia patch."></textarea>
+      </section>
+
+      <section id="pathologySection" data-title="Pathology Report">
+        <h2>病理報告 (Pathology Report)</h2>
+        <textarea id="pathology_report" rows="4" placeholder="nil (if no pathology report)"></textarea>
+      </section>
+
+      <section id="diagnosisSection" data-title="Tentative Diagnosis">
+        <h2>臆斷 (Tentative Diagnosis)</h2>
+        <h3>[Active]</h3>
+        <textarea id="diagnosis_active" rows="3" placeholder="#. Main diagnosis for this admission
+- status post treatment if applicable"></textarea>
+        <h3>[Underlying]</h3>
+        <textarea id="diagnosis_underlying" rows="4" placeholder="#. Underlying condition 1
+#. Underlying condition 2
+#. Underlying condition 3"></textarea>
+      </section>
+
+      <section id="planSection" data-title="SOAP Note">
+        <h2>醫療需求與治療計畫 (Medical Needs and Care Plan)</h2>
+        <label>Age and sex: <input type="text" id="plan_age_sex" placeholder="e.g., 99F"/></label>
+        <h3>S: Subjective</h3>
+        <p style="padding:0.4rem 0.6rem; background:#e9ecef; border-radius:5px; border:1px solid var(--border); font-size:0.72rem;">Auto-filled from the Chief Complaint section.</p>
+        <h3>O: Objective</h3>
+        <h4>Key Physical Examination Findings</h4>
+        <textarea id="plan_pe_findings" rows="2" placeholder="e.g., breathing sound: crackles(+, somewhere out there)"></textarea>
+        <h4>Lab</h4>
+        <textarea id="plan_lab_data" rows="4" placeholder="Significant lab data"></textarea>
+        <h4>EKG</h4>
+        <div style="display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap;">
+          <label style="flex-basis:180px;">Date: <input type="text" id="plan_ekg_date" placeholder="YYYY/MM/DD"/></label>
+          <label style="flex-grow:1;">Interpretation: <input type="text" id="plan_ekg_interp" placeholder="Normal sinus rhythm"/></label>
+        </div>
+        <h4>CXR</h4>
+        <div style="display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap;">
+          <label style="flex-basis:180px;">Date: <input type="text" id="plan_cxr_date" placeholder="YYYY/MM/DD"/></label>
+          <label style="flex-grow:1;">Interpretation: <input type="text" id="plan_cxr_interp" placeholder="No cardiomegaly. No obvious pneumonia patch."/></label>
+        </div>
+        <h3>A: Assessment</h3>
+        <h4>Active Problems</h4>
+        <textarea id="plan_assessment_active" rows="2" placeholder="#. Fever, suspect infection…"></textarea>
+        <h4>Underlying Conditions</h4>
+        <textarea id="plan_assessment_underlying" rows="3" placeholder="Underlying conditions"></textarea>
+        <h3>P: Plan</h3>
+        <textarea id="plan_plan" rows="3" placeholder="1. Keep current treatment…
+2. Check lab
+3. Arrange test"></textarea>
+        <label>Treatment Goal: <input type="text" id="plan_treatment_goal" placeholder="Resolve symptoms and discharge without complications"/></label>
+      </section>
+
+    </div><!-- /sectionsContainer -->
+
+    <!-- Output panel -->
+    <div id="outputPanel" class="adm-panel">
+      <div class="adm-panel-title">Output Preview</div>
+      <div id="controls">
+        <div id="noteOutputContainer">
+          <div id="noteOutput"></div>
+        </div>
+      </div>
+    </div>
+
+  </main><!-- /adm-main -->
+
+  <!-- Modal: kept in DOM for JS compatibility, never shown in new layout -->
+  <div id="modalOverlay" style="display:none;">
+    <div id="modalContent">
+      <button id="modalClose">×</button>
+      <div id="modalBody"></div>
+    </div>
+  </div>
+
+  <div id="copy-toast"></div>
+
 </body>
 </html>

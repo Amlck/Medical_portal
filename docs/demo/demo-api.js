@@ -71,8 +71,12 @@
   }
 
   function noteFor(type, patient) {
+    const requested = type || 'sbar';
+    const generated = fixtures.generatedNotes || {};
+    if (patient && patient.generatedNotes && patient.generatedNotes[requested]) return patient.generatedNotes[requested];
+    if (patient && generated[patient.id] && generated[patient.id][requested]) return generated[patient.id][requested];
     const notes = fixtures.cannedNotes || {};
-    const base = notes[type] || notes.sbar || 'Demo note unavailable.';
+    const base = notes[requested] || notes.sbar || 'Demo note unavailable.';
     return `${base}\n\n_Demo mode: generated from canned text for ${patient ? patient.name : 'synthetic patients'}._`;
   }
 

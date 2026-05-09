@@ -162,6 +162,69 @@ Anion gap closed. Eating reliably. Transitioned to basal-bolus insulin. Needs in
   wardTodos: [
     { id: 't-ward-1', patient_id: '', title: 'Demo huddle: review pending discharges', note: 'Ward-level task example.', priority: 'normal', status: 'open', due_at: '2026-05-08T16:00', created_at: '2026-05-08T07:00:00' }
   ],
+  generatedNotes: {
+    'demo-alpha': {
+      sbar: `## SBAR Handoff
+**Situation:** 72F with community-acquired pneumonia and AKI on CKD3 is clinically improving. She is afebrile for 36 hours and is down to nasal cannula 1 L/min.
+
+**Background:** Admitted 2026-05-01 with fever, productive cough, mild hypoxemia, and right lower-lobe opacity. Treated with ceftriaxone plus doxycycline. PMH includes HTN, CKD3, and type 2 diabetes. No known drug allergies.
+
+**Assessment:** Pneumonia is improving by fever curve, oxygen need, and CXR. AKI is recovering with Cr down from peak 2.2 to 1.8. Main active risks are culture follow-up, renal dosing, and avoiding recurrent volume depletion.
+
+**Recommendation:** Continue current antibiotics today, review final sputum culture by 17:00, repeat BMP tomorrow morning, and consider oral step-down if cultures remain negative and oxygen is weaned. Escalate for fever, SpO2 decline, hypotension, or Cr >2.`,
+      progress: `## Progress Note
+**Subjective:** Patient reports easier breathing and less cough. No chills overnight. Oral intake is improving; no chest pain or diarrhea.
+
+**Objective:** T 37.1, HR 92, BP 128/68, RR 18, SpO2 95% on nasal cannula 1 L/min. Exam: comfortable, scattered right basilar crackles, no increased work of breathing, euvolemic. Recent labs show WBC 13.2, Na 134, K 4.8, HCO3 20, BUN 38, Cr 1.8, CRP 68. CXR shows improving RLL opacity.
+
+**Assessment/Plan:**
+1. Community-acquired pneumonia, improving: continue ceftriaxone/doxycycline day 4, review final sputum culture, transition to oral regimen if stable.
+2. AKI on CKD3, improving: encourage PO intake, avoid nephrotoxins, trend BMP, continue holding metformin until renal function stabilizes.
+3. Diabetes: monitor glucose while metformin held; resume only when clinically appropriate.
+4. Disposition: home in 24-48h if oxygen weaned and cultures do not require IV therapy.`,
+      discharge: `## Problem-Oriented Discharge Draft
+**Community-acquired pneumonia:** Treated with ceftriaxone and doxycycline with improvement in fever, cough, oxygen requirement, and chest imaging. Final culture review should be completed before discharge. Provide return precautions for fever, dyspnea, chest pain, confusion, or worsening weakness.
+
+**AKI on CKD3:** Creatinine improved from peak 2.2 to 1.8 with oral intake and medication review. Avoid NSAIDs and other nephrotoxins. Repeat BMP after discharge and reassess chronic medications.
+
+**Diabetes:** Metformin was held during AKI. Reconcile diabetes plan at discharge and clarify when it can be restarted after kidney function is reviewed.
+
+**Pending items:** Final sputum culture; repeat BMP. Follow-up with primary care within 1 week.`,
+      discharge_ntuh: `## Chronological Discharge Course Draft
+This synthetic 72-year-old woman was admitted on 2026-05-01 for fever, productive cough, hypoxemia, and right lower-lobe pneumonia. Blood and sputum cultures were obtained, and ceftriaxone plus doxycycline were started. During hospitalization she developed AKI on CKD3, so nephrotoxic medications were avoided and metformin was held.
+
+Her fever curve, oxygen requirement, and chest radiograph improved. Creatinine downtrended from peak 2.2 to 1.8 with supportive care and oral intake. At the time of discharge planning, she was stable on low-flow oxygen with final culture review and repeat BMP still pending.`
+    },
+    'demo-beta': {
+      sbar: `## SBAR Handoff
+**Situation:** 58M admitted for DKA, now resolved, with discharge dependent on insulin education and supply confirmation.
+
+**Background:** Presented 2026-05-03 with nausea, dehydration, glucose 486 mg/dL, and anion-gap metabolic acidosis. Treated with IV fluids and insulin infusion, then transitioned to basal-bolus insulin. PMH includes type 1 diabetes and dyslipidemia. Allergy: sulfa rash.
+
+**Assessment:** Anion gap is closed, bicarbonate is 24, creatinine is 1.0, and patient is eating reliably. Current risk is failed outpatient transition if supplies, dosing instructions, and follow-up are incomplete.
+
+**Recommendation:** Complete insulin pen teaching, confirm pens/needles/glucose strips, provide sick-day instructions, and arrange endocrine or primary care follow-up. Escalate for recurrent vomiting, glucose persistently >300, hypoglycemia, or mental status change.`,
+      progress: `## Progress Note
+**Subjective:** Patient feels well, tolerating meals, and denies nausea or abdominal pain. He is anxious about the new insulin plan and wants written instructions.
+
+**Objective:** T 36.8, HR 84, BP 118/72, RR 16, SpO2 98% on room air. Labs: Na 137, K 4.1, HCO3 24, BUN 18, Cr 1.0, glucose 168. Exam: alert, hydrated, no respiratory distress, abdomen soft and nontender.
+
+**Assessment/Plan:**
+1. DKA, resolved: continue glargine 22 units nightly and lispro 6 units with meals; monitor pre-meal and bedtime glucose.
+2. Type 1 diabetes transition: diabetes educator to complete pen teaching; confirm supplies before discharge.
+3. Discharge readiness: provide hypoglycemia plan, sick-day rules, and follow-up appointment.`,
+      discharge: `## Problem-Oriented Discharge Draft
+**DKA, resolved:** Treated with insulin infusion and IV fluids. Anion gap closed and patient transitioned safely to basal-bolus insulin while tolerating oral intake.
+
+**Diabetes discharge plan:** Continue glargine 22 units nightly and lispro 6 units with meals in this synthetic scenario. Confirm patient can demonstrate injection technique and glucose monitoring before discharge.
+
+**Supplies and follow-up:** Ensure insulin pens, pen needles, glucose strips, and rescue carbohydrates are available. Arrange follow-up for insulin titration and review return precautions for vomiting, dehydration, hyperglycemia, ketones, or hypoglycemia.`,
+      discharge_ntuh: `## Chronological Discharge Course Draft
+This synthetic 58-year-old man was admitted on 2026-05-03 with nausea, dehydration, hyperglycemia, and anion-gap metabolic acidosis consistent with DKA. He received IV fluids, electrolyte monitoring, and insulin infusion until the anion gap closed.
+
+He was transitioned to basal-bolus insulin once tolerating meals. By 2026-05-08, bicarbonate was 24, creatinine was 1.0, and vital signs were stable on room air. Discharge planning focused on insulin teaching, supply confirmation, and outpatient follow-up.`
+    }
+  },
   cannedNotes: {
     sbar: `## SBAR Handoff
 **Situation:** Demo patient is clinically improving with stable hemodynamics.
